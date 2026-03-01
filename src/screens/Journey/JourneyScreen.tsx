@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   SafeAreaView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { JourneyStackParamList } from '../../navigation/JourneyNavigator';
 import { useAuthStore } from '../../store/authStore';
@@ -38,6 +39,16 @@ function Initials({ name }: { name: string }) {
 export default function JourneyScreen({ navigation }: Props) {
   const { user } = useAuthStore();
   const userId = user?.id ?? '';
+
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={{ marginRight: 4 }}>
+          <Ionicons name="settings-outline" size={22} color="#2D5016" />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
 
   const { data: profile, isLoading: profileLoading } = useProfile(userId);
   const { data: userBadges = [] } = useUserBadges(userId);

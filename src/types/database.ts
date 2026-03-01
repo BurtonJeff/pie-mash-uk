@@ -34,6 +34,7 @@ export interface Profile {
   total_points: number;
   total_visits: number;
   unique_shops_visited: number;
+  expo_push_token: string | null;
   created_at: string;
 }
 
