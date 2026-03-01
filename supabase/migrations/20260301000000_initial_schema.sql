@@ -1,14 +1,13 @@
 -- ============================================================
 -- Enable extensions
 -- ============================================================
-create extension if not exists "uuid-ossp";
 create extension if not exists "postgis";
 
 -- ============================================================
 -- SHOPS
 -- ============================================================
 create table public.shops (
-  id            uuid primary key default uuid_generate_v4(),
+  id            uuid primary key default gen_random_uuid(),
   name          text not null,
   slug          text not null unique,
   description   text not null default '',
@@ -40,7 +39,7 @@ create index shops_is_active_idx on public.shops (is_active);
 -- SHOP PHOTOS
 -- ============================================================
 create table public.shop_photos (
-  id           uuid primary key default uuid_generate_v4(),
+  id           uuid primary key default gen_random_uuid(),
   shop_id      uuid not null references public.shops (id) on delete cascade,
   storage_path text not null,
   caption      text,
@@ -89,7 +88,7 @@ create trigger on_auth_user_created
 -- CHECK-INS
 -- ============================================================
 create table public.checkins (
-  id            uuid primary key default uuid_generate_v4(),
+  id            uuid primary key default gen_random_uuid(),
   user_id       uuid not null references public.profiles (id) on delete cascade,
   shop_id       uuid not null references public.shops (id) on delete cascade,
   checked_in_at timestamptz not null default now(),
@@ -108,7 +107,7 @@ create index checkins_checked_in_at_idx on public.checkins (checked_in_at desc);
 -- BADGES
 -- ============================================================
 create table public.badges (
-  id             uuid primary key default uuid_generate_v4(),
+  id             uuid primary key default gen_random_uuid(),
   slug           text not null unique,
   name           text not null,
   description    text not null,
@@ -120,7 +119,7 @@ create table public.badges (
 );
 
 create table public.user_badges (
-  id         uuid primary key default uuid_generate_v4(),
+  id         uuid primary key default gen_random_uuid(),
   user_id    uuid not null references public.profiles (id) on delete cascade,
   badge_id   uuid not null references public.badges (id) on delete cascade,
   awarded_at timestamptz not null default now(),
@@ -133,7 +132,7 @@ create index user_badges_user_id_idx on public.user_badges (user_id);
 -- GROUPS
 -- ============================================================
 create table public.groups (
-  id          uuid primary key default uuid_generate_v4(),
+  id          uuid primary key default gen_random_uuid(),
   name        text not null,
   description text not null default '',
   invite_code text not null unique default upper(substring(md5(random()::text), 1, 8)),
@@ -143,7 +142,7 @@ create table public.groups (
 );
 
 create table public.group_members (
-  id        uuid primary key default uuid_generate_v4(),
+  id        uuid primary key default gen_random_uuid(),
   group_id  uuid not null references public.groups (id) on delete cascade,
   user_id   uuid not null references public.profiles (id) on delete cascade,
   role      text not null default 'member' check (role in ('admin', 'member')),
@@ -158,7 +157,7 @@ create index group_members_user_id_idx on public.group_members (user_id);
 -- GROUP MESSAGES
 -- ============================================================
 create table public.group_messages (
-  id         uuid primary key default uuid_generate_v4(),
+  id         uuid primary key default gen_random_uuid(),
   group_id   uuid not null references public.groups (id) on delete cascade,
   user_id    uuid not null references public.profiles (id) on delete cascade,
   body       text not null,
@@ -171,7 +170,7 @@ create index group_messages_group_id_idx on public.group_messages (group_id, cre
 -- CHALLENGES
 -- ============================================================
 create table public.challenges (
-  id           uuid primary key default uuid_generate_v4(),
+  id           uuid primary key default gen_random_uuid(),
   title        text not null,
   description  text not null,
   criteria     jsonb not null,   -- {type: 'most_visits' | 'first_checkin' | 'shop_list', value: ..., shop_ids: [...]}
