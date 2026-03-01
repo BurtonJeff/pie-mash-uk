@@ -45,6 +45,12 @@ export default function ShopDetailScreen({ route, navigation }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('details');
   const [photoIndex, setPhotoIndex] = useState(0);
 
+  React.useLayoutEffect(() => {
+    if (shop?.name) {
+      navigation.setOptions({ title: shop.name });
+    }
+  }, [navigation, shop?.name]);
+
   if (isLoading) {
     return (
       <View style={styles.center}>
@@ -65,10 +71,6 @@ export default function ShopDetailScreen({ route, navigation }: Props) {
   const hasHours = hours && Object.keys(hours).length > 0;
   const open = hasHours ? isOpenNow(hours) : null;
   const photos = shop.photos ?? [];
-
-  React.useLayoutEffect(() => {
-    navigation.setOptions({ title: shop.name });
-  }, [navigation, shop.name]);
 
   return (
     <SafeAreaView style={styles.container}>
