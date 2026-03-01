@@ -142,4 +142,13 @@ export async function sendMessage(groupId: string, userId: string, body: string)
     .from('group_messages')
     .insert({ group_id: groupId, user_id: userId, body });
   if (error) throw error;
+
+  // Fire-and-forget: notify other group members.
+  // Never let a notification failure surface to the user.
+  const preview = body.length > 60 ? `${body.slice(0, 60)}…` : body;
+  supabase.functions
+    .invoke('notify-group-message', {
+      body: { group_id: groupId, sender_id: userId, message_preview: preview },
+    })
+    .catch(() => {});
 }

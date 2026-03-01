@@ -43,6 +43,20 @@ Deno.serve(async (req) => {
     await supabase.from('user_badges').insert(
       toAward.map((badge_id) => ({ user_id, badge_id })),
     );
+
+    // Notify the user for each newly earned badge.
+    for (const badge_id of toAward) {
+      const badge = (unearned ?? []).find((b) => b.id === badge_id);
+      if (!badge) continue;
+      await supabase.functions.invoke('send-notification', {
+        body: {
+          user_id,
+          title: '🏅 New Badge Earned!',
+          body: `You earned "${badge.name}" — ${badge.description}`,
+          data: { type: 'badge', badgeId: badge_id },
+        },
+      });
+    }
   }
 
   return new Response(JSON.stringify({ awarded: toAward.length }), {
