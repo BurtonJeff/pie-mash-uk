@@ -15,13 +15,6 @@ import FeedItemComponent from '../../components/community/FeedItem';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'HomeMain'>;
 
-function getGreeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 17) return 'Good afternoon';
-  return 'Good evening';
-}
-
 export default function HomeScreen({ navigation }: Props) {
   const { user } = useAuthStore();
   const userId = user?.id ?? '';
@@ -31,7 +24,6 @@ export default function HomeScreen({ navigation }: Props) {
   const { data: feed = [] } = useGlobalFeed();
 
   const recentFeed = feed.slice(0, 3);
-  const name = profile?.display_name || profile?.username || 'friend';
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -39,15 +31,6 @@ export default function HomeScreen({ navigation }: Props) {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Greeting */}
-        <View style={styles.header}>
-          <Text style={styles.headerEmoji}>🥧</Text>
-          <View>
-            <Text style={styles.greeting}>{getGreeting()},</Text>
-            <Text style={styles.name}>{name}!</Text>
-          </View>
-        </View>
-
         {/* Stats row */}
         {profile && (
           <View style={styles.statsRow}>
@@ -103,11 +86,6 @@ function StatPill({ label, value }: { label: string; value: number }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f8f5f0' },
   content: { padding: 20, paddingBottom: 40 },
-
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, gap: 14 },
-  headerEmoji: { fontSize: 48 },
-  greeting: { fontSize: 15, color: '#888' },
-  name: { fontSize: 24, fontWeight: '800', color: '#1a1a1a' },
 
   statsRow: {
     flexDirection: 'row',
