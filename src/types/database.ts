@@ -19,6 +19,7 @@ export interface Shop {
   opening_hours: Record<string, unknown>;
   price_range: 1 | 2 | 3 | 4;
   is_active: boolean;
+  is_featured: boolean;
   features: Record<string, boolean>;
   created_at: string;
   updated_at: string;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
-import HomeScreen from '../screens/Home/HomeScreen';
+import HomeNavigator from './HomeNavigator';
 import DiscoverNavigator from './DiscoverNavigator';
 import CheckInScreen from '../screens/CheckIn/CheckInScreen';
 import JourneyNavigator from './JourneyNavigator';
@@ -20,7 +20,7 @@ const Tab = createBottomTabNavigator<TabParamList>();
 export default function TabNavigator() {
   return (
     <Tab.Navigator>
-      <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Home" component={HomeNavigator} options={{ headerShown: false }} />
       <Tab.Screen
         name="Discover"
         component={DiscoverNavigator}
