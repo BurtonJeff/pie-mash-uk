@@ -36,8 +36,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-apple-authentication",
-      "expo-web-browser"
+      "expo-apple-authentication"
     ]
   }
 }
