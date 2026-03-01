@@ -168,6 +168,16 @@ export default function SettingsScreen({ navigation }: Props) {
           </View>
         </View>
 
+        {/* ── Admin ────────────────────────────────────── */}
+        {profile?.is_admin && (
+          <>
+            <Text style={styles.sectionLabel}>Admin</Text>
+            <View style={styles.group}>
+              <RowLink label="Admin Panel" onPress={() => navigation.navigate('Admin')} />
+            </View>
+          </>
+        )}
+
         {/* ── Sign Out ─────────────────────────────────── */}
         <Text style={styles.sectionLabel}>Account Actions</Text>
         <View style={styles.group}>

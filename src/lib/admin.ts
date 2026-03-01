@@ -1,0 +1,235 @@
+import { supabase } from './supabase';
+import { Shop, Badge } from '../types/database';
+
+// ─── Stats ───────────────────────────────────────────────────────────────────
+
+export interface AdminStats {
+  totalUsers: number;
+  totalShops: number;
+  checkInsToday: number;
+}
+
+export async function fetchAdminStats(): Promise<AdminStats> {
+  const todayMidnight = new Date();
+  todayMidnight.setUTCHours(0, 0, 0, 0);
+
+  const [usersResult, shopsResult, checkInsResult] = await Promise.all([
+    supabase.from('profiles').select('id', { count: 'exact', head: true }),
+    supabase.from('shops').select('id', { count: 'exact', head: true }).eq('is_active', true),
+    supabase
+      .from('check_ins')
+      .select('id', { count: 'exact', head: true })
+      .gte('checked_in_at', todayMidnight.toISOString()),
+  ]);
+
+  if (usersResult.error) throw usersResult.error;
+  if (shopsResult.error) throw shopsResult.error;
+  if (checkInsResult.error) throw checkInsResult.error;
+
+  return {
+    totalUsers: usersResult.count ?? 0,
+    totalShops: shopsResult.count ?? 0,
+    checkInsToday: checkInsResult.count ?? 0,
+  };
+}
+
+// ─── Shops ────────────────────────────────────────────────────────────────────
+
+export interface AdminShop extends Shop {
+  primary_photo: string | null;
+}
+
+export async function fetchAdminShops(): Promise<AdminShop[]> {
+  const { data, error } = await supabase
+    .from('shops')
+    .select(`
+      *,
+      shop_photos (storage_path, is_primary)
+    `)
+    .order('name');
+
+  if (error) throw error;
+
+  return (data ?? []).map((shop: any) => ({
+    ...shop,
+    primary_photo:
+      shop.shop_photos?.find((p: any) => p.is_primary)?.storage_path ??
+      shop.shop_photos?.[0]?.storage_path ??
+      null,
+  }));
+}
+
+export async function setShopFeatured(shopId: string): Promise<void> {
+  const { error: clearError } = await supabase
+    .from('shops')
+    .update({ is_featured: false })
+    .neq('id', '');
+
+  if (clearError) throw clearError;
+
+  const { error } = await supabase
+    .from('shops')
+    .update({ is_featured: true })
+    .eq('id', shopId);
+
+  if (error) throw error;
+}
+
+export async function setShopActive(shopId: string, active: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('shops')
+    .update({ is_active: active })
+    .eq('id', shopId);
+
+  if (error) throw error;
+}
+
+export interface ShopFormData {
+  name: string;
+  description: string;
+  address_line1: string;
+  address_line2: string;
+  city: string;
+  postcode: string;
+  phone: string;
+  website: string;
+  latitude: string;
+  longitude: string;
+  price_range: 1 | 2 | 3 | 4;
+  features: { is_takeaway: boolean; has_seating: boolean; has_parking: boolean };
+}
+
+export async function addShop(data: ShopFormData): Promise<void> {
+  const slug = data.name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+
+  const { error } = await supabase.from('shops').insert({
+    name: data.name,
+    slug,
+    description: data.description,
+    address_line1: data.address_line1,
+    address_line2: data.address_line2 || null,
+    city: data.city,
+    postcode: data.postcode,
+    phone: data.phone || null,
+    website: data.website || null,
+    latitude: parseFloat(data.latitude),
+    longitude: parseFloat(data.longitude),
+    price_range: data.price_range,
+    features: data.features,
+    opening_hours: {},
+    is_active: true,
+    is_featured: false,
+  });
+
+  if (error) throw error;
+}
+
+// ─── Badges ───────────────────────────────────────────────────────────────────
+
+export async function fetchAdminBadges(): Promise<Badge[]> {
+  const { data, error } = await supabase
+    .from('badges')
+    .select('*')
+    .order('name');
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function setBadgeActive(badgeId: string, active: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('badges')
+    .update({ is_active: active })
+    .eq('id', badgeId);
+
+  if (error) throw error;
+}
+
+export interface BadgeFormData {
+  name: string;
+  description: string;
+  icon_url: string;
+  category: string;
+  criteria_type: 'total_checkins' | 'unique_shops';
+  criteria_value: string;
+}
+
+export async function addBadge(data: BadgeFormData): Promise<void> {
+  const slug = data.name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+
+  const { error } = await supabase.from('badges').insert({
+    slug,
+    name: data.name,
+    description: data.description,
+    icon_url: data.icon_url,
+    category: data.category,
+    criteria_type: data.criteria_type,
+    criteria_value: parseInt(data.criteria_value, 10),
+    is_active: true,
+  });
+
+  if (error) throw error;
+}
+
+// ─── Challenges ───────────────────────────────────────────────────────────────
+
+export interface AdminChallenge {
+  id: string;
+  title: string;
+  description: string;
+  pointsReward: number;
+  startDate: string;
+  endDate: string;
+  scope: 'global' | 'group';
+  isActive: boolean;
+}
+
+export async function fetchAdminChallenges(): Promise<AdminChallenge[]> {
+  const { data, error } = await supabase
+    .from('challenges')
+    .select('*')
+    .order('start_date', { ascending: false });
+
+  if (error) throw error;
+
+  return (data ?? []).map((c: any) => ({
+    id: c.id,
+    title: c.title,
+    description: c.description,
+    pointsReward: c.points_reward,
+    startDate: c.start_date,
+    endDate: c.end_date,
+    scope: c.scope,
+    isActive: c.is_active,
+  }));
+}
+
+export interface ChallengeFormData {
+  title: string;
+  description: string;
+  points_reward: string;
+  start_date: string;
+  end_date: string;
+}
+
+export async function addChallenge(data: ChallengeFormData): Promise<void> {
+  const { error } = await supabase.from('challenges').insert({
+    title: data.title,
+    description: data.description,
+    points_reward: parseInt(data.points_reward, 10),
+    start_date: data.start_date,
+    end_date: data.end_date,
+    scope: 'global',
+    is_active: true,
+    criteria: {},
+    group_id: null,
+  });
+
+  if (error) throw error;
+}

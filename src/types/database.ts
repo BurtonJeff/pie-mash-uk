@@ -35,6 +35,7 @@ export interface Profile {
   total_visits: number;
   unique_shops_visited: number;
   expo_push_token: string | null;
+  is_admin: boolean;
   created_at: string;
 }
 
