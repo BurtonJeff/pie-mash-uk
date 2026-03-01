@@ -4,7 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import HomeScreen from '../screens/Home/HomeScreen';
 import DiscoverNavigator from './DiscoverNavigator';
 import CheckInScreen from '../screens/CheckIn/CheckInScreen';
-import JourneyScreen from '../screens/Journey/JourneyScreen';
+import JourneyNavigator from './JourneyNavigator';
 import CommunityScreen from '../screens/Community/CommunityScreen';
 
 export type TabParamList = {
@@ -27,7 +27,7 @@ export default function TabNavigator() {
         options={{ headerShown: false }}
       />
       <Tab.Screen name="CheckIn" component={CheckInScreen} />
-      <Tab.Screen name="Journey" component={JourneyScreen} />
+      <Tab.Screen name="Journey" component={JourneyNavigator} options={{ headerShown: false }} />
       <Tab.Screen name="Community" component={CommunityScreen} />
     </Tab.Navigator>
   );

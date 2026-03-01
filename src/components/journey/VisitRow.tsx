@@ -1,0 +1,61 @@
+import React from 'react';
+import { View, Text, Image, StyleSheet } from 'react-native';
+
+interface Props {
+  shopName: string;
+  checkedInAt: string;
+  photoUrl?: string | null;
+  pointsEarned: number;
+}
+
+export default function VisitRow({ shopName, checkedInAt, photoUrl, pointsEarned }: Props) {
+  const date = new Date(checkedInAt);
+  const dateStr = date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+  return (
+    <View style={styles.row}>
+      {photoUrl ? (
+        <Image source={{ uri: photoUrl }} style={styles.photo} />
+      ) : (
+        <View style={[styles.photo, styles.photoPlaceholder]}>
+          <Text style={styles.photoPlaceholderText}>🥧</Text>
+        </View>
+      )}
+
+      <View style={styles.info}>
+        <Text style={styles.shopName} numberOfLines={1}>{shopName}</Text>
+        <Text style={styles.datetime}>{dateStr} · {timeStr}</Text>
+      </View>
+
+      <View style={styles.points}>
+        <Text style={styles.pointsValue}>+{pointsEarned}</Text>
+        <Text style={styles.pointsLabel}>pts</Text>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginBottom: 8,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  photo: { width: 60, height: 60 },
+  photoPlaceholder: { backgroundColor: '#f0ede8', alignItems: 'center', justifyContent: 'center' },
+  photoPlaceholderText: { fontSize: 22 },
+  info: { flex: 1, paddingHorizontal: 12 },
+  shopName: { fontSize: 14, fontWeight: '600' },
+  datetime: { fontSize: 12, color: '#888', marginTop: 2 },
+  points: { paddingRight: 14, alignItems: 'center' },
+  pointsValue: { fontSize: 16, fontWeight: '800', color: '#2D5016' },
+  pointsLabel: { fontSize: 10, color: '#888' },
+});
