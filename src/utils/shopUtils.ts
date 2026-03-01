@@ -61,9 +61,6 @@ export function formatAddress(shop: Shop): string {
     .join(', ');
 }
 
-export function priceLabel(range: number): string {
-  return '£'.repeat(range);
-}
 
 export function openDirections(shop: Shop) {
   const label = encodeURIComponent(shop.name);

@@ -17,8 +17,6 @@ import { ShopFormData } from '../../lib/admin';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'AdminShopForm'>;
 
-const PRICE_LABELS = ['£', '££', '£££', '££££'] as const;
-
 export default function AdminShopFormScreen({ navigation }: Props) {
   const addShop = useAddShop();
 
@@ -182,25 +180,6 @@ export default function AdminShopFormScreen({ navigation }: Props) {
         keyboardType="numeric"
       />
 
-      <FieldLabel label="Price Range" />
-      <View style={styles.priceRow}>
-        {PRICE_LABELS.map((label, idx) => {
-          const val = (idx + 1) as 1 | 2 | 3 | 4;
-          const selected = form.price_range === val;
-          return (
-            <TouchableOpacity
-              key={val}
-              style={[styles.priceChip, selected && styles.priceChipSelected]}
-              onPress={() => set('price_range', val)}
-            >
-              <Text style={[styles.priceChipText, selected && styles.priceChipTextSelected]}>
-                {label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
       <FieldLabel label="Features" />
       <View style={styles.switchGroup}>
         <SwitchRow
@@ -294,33 +273,6 @@ const styles = StyleSheet.create({
   multiline: {
     minHeight: 80,
     textAlignVertical: 'top',
-  },
-
-  priceRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  priceChip: {
-    flex: 1,
-    paddingVertical: 10,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e0ddd8',
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  priceChipSelected: {
-    backgroundColor: '#2D5016',
-    borderColor: '#2D5016',
-  },
-  priceChipText: {
-    fontSize: 14,
-    color: '#555',
-    fontWeight: '500',
-  },
-  priceChipTextSelected: {
-    color: '#fff',
-    fontWeight: '700',
   },
 
   switchGroup: {
