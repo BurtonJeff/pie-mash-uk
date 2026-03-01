@@ -19,7 +19,6 @@ import {
   isOpenNow,
   formatAddress,
   formatHours,
-  priceLabel,
   openDirections,
   shopPhotoUrl,
 } from '../../utils/shopUtils';
@@ -100,7 +99,6 @@ export default function ShopDetailScreen({ route, navigation }: Props) {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <Text style={styles.name}>{shop.name}</Text>
-            <Text style={styles.price}>{priceLabel(shop.price_range)}</Text>
           </View>
           <Text style={styles.city}>{shop.city} · {shop.postcode}</Text>
           <View style={styles.badges}>

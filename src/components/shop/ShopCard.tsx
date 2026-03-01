@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { ShopWithPhoto } from '../../lib/shops';
-import { OpeningHours, isOpenNow, formatDistance, priceLabel, shopPhotoUrl } from '../../utils/shopUtils';
+import { OpeningHours, isOpenNow, formatDistance, shopPhotoUrl } from '../../utils/shopUtils';
 
 interface Props {
   shop: ShopWithPhoto;
@@ -24,10 +24,7 @@ export default function ShopCard({ shop, distanceKm, onPress }: Props) {
       )}
 
       <View style={styles.info}>
-        <View style={styles.row}>
-          <Text style={styles.name} numberOfLines={1}>{shop.name}</Text>
-          <Text style={styles.price}>{priceLabel(shop.price_range)}</Text>
-        </View>
+        <Text style={styles.name} numberOfLines={1}>{shop.name}</Text>
 
         <Text style={styles.city} numberOfLines={1}>{shop.city}</Text>
 
