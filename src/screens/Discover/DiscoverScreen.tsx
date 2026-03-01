@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  ScrollView,
   SafeAreaView,
 } from 'react-native';
 import MapView, { Marker, Callout } from 'react-native-maps';
@@ -15,20 +14,13 @@ import * as Location from 'expo-location';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useShops } from '../../hooks/useShops';
 import ShopCard from '../../components/shop/ShopCard';
-import { distanceKm, isOpenNow, OpeningHours } from '../../utils/shopUtils';
+import { distanceKm } from '../../utils/shopUtils';
 import { ShopWithPhoto } from '../../lib/shops';
 import { DiscoverStackParamList } from '../../navigation/DiscoverNavigator';
 
 type Props = NativeStackScreenProps<DiscoverStackParamList, 'DiscoverHome'>;
 
 type ViewMode = 'list' | 'map';
-
-interface Filters {
-  openNow: boolean;
-  takeaway: boolean;
-  seating: boolean;
-  parking: boolean;
-}
 
 const DEFAULT_REGION = {
   latitude: 51.505,
@@ -41,7 +33,6 @@ export default function DiscoverScreen({ navigation }: Props) {
   const { data: shops = [], isLoading, error } = useShops();
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState<Filters>({ openNow: false, takeaway: false, seating: false, parking: false });
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
   const requestLocation = useCallback(async () => {
@@ -64,16 +55,6 @@ export default function DiscoverScreen({ navigation }: Props) {
       );
     }
 
-    if (filters.openNow) {
-      result = result.filter((s) => {
-        const hours = s.opening_hours as unknown as OpeningHours;
-        return hours && Object.keys(hours).length > 0 && isOpenNow(hours);
-      });
-    }
-    if (filters.takeaway) result = result.filter((s) => (s.features as any)?.takeaway);
-    if (filters.seating) result = result.filter((s) => (s.features as any)?.seating);
-    if (filters.parking) result = result.filter((s) => (s.features as any)?.parking);
-
     if (userLocation) {
       return [...result].sort(
         (a, b) =>
@@ -83,11 +64,7 @@ export default function DiscoverScreen({ navigation }: Props) {
     }
 
     return result;
-  }, [shops, search, filters, userLocation]);
-
-  function toggleFilter(key: keyof Filters) {
-    setFilters((prev) => ({ ...prev, [key]: !prev[key] }));
-  }
+  }, [shops, search, userLocation]);
 
   function getDistance(shop: ShopWithPhoto) {
     if (!userLocation) return undefined;
@@ -114,21 +91,6 @@ export default function DiscoverScreen({ navigation }: Props) {
           <Text style={styles.locationButtonText}>Near me</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Filter chips */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow} contentContainerStyle={styles.filterContent}>
-        {(Object.keys(filters) as (keyof Filters)[]).map((key) => (
-          <TouchableOpacity
-            key={key}
-            style={[styles.chip, filters[key] && styles.chipActive]}
-            onPress={() => toggleFilter(key)}
-          >
-            <Text style={[styles.chipText, filters[key] && styles.chipTextActive]}>
-              {key === 'openNow' ? 'Open now' : key.charAt(0).toUpperCase() + key.slice(1)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
 
       {/* View mode toggle */}
       <View style={styles.toggleRow}>
@@ -211,19 +173,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   locationButtonText: { color: '#fff', fontWeight: '600', fontSize: 13 },
-  filterRow: { maxHeight: 44 },
-  filterContent: { paddingHorizontal: 16, gap: 8, alignItems: 'center' },
-  chip: {
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  chipActive: { backgroundColor: '#2D5016', borderColor: '#2D5016' },
-  chipText: { fontSize: 13, color: '#555' },
-  chipTextActive: { color: '#fff', fontWeight: '600' },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
