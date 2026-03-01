@@ -5,7 +5,7 @@ import HomeScreen from '../screens/Home/HomeScreen';
 import DiscoverNavigator from './DiscoverNavigator';
 import CheckInScreen from '../screens/CheckIn/CheckInScreen';
 import JourneyNavigator from './JourneyNavigator';
-import CommunityScreen from '../screens/Community/CommunityScreen';
+import CommunityNavigator from './CommunityNavigator';
 
 export type TabParamList = {
   Home: undefined;
@@ -28,7 +28,7 @@ export default function TabNavigator() {
       />
       <Tab.Screen name="CheckIn" component={CheckInScreen} />
       <Tab.Screen name="Journey" component={JourneyNavigator} options={{ headerShown: false }} />
-      <Tab.Screen name="Community" component={CommunityScreen} />
+      <Tab.Screen name="Community" component={CommunityNavigator} options={{ headerShown: false }} />
     </Tab.Navigator>
   );
 }
