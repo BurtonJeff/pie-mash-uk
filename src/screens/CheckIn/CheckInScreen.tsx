@@ -1,14 +1,430 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  TextInput,
+  ActivityIndicator,
+  Alert,
+  SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
+  Image,
+  ScrollView,
+} from 'react-native';
+import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
+import { useShops } from '../../hooks/useShops';
+import { useSubmitCheckIn } from '../../hooks/useCheckin';
+import { useAuthStore } from '../../store/authStore';
+import { ShopWithPhoto } from '../../lib/shops';
+import { distanceKm, formatDistance, formatAddress } from '../../utils/shopUtils';
+import BadgeCelebration from '../../components/checkin/BadgeCelebration';
+import { CheckInResult } from '../../lib/checkins';
+
+const CHECK_IN_RADIUS_M = 200;
+
+type Step = 'idle' | 'confirming' | 'photo' | 'note' | 'submitting' | 'success';
+
+interface UserLocation {
+  latitude: number;
+  longitude: number;
+}
 
 export default function CheckInScreen() {
+  const { user } = useAuthStore();
+  const { data: shops = [], isLoading: shopsLoading } = useShops();
+  const mutation = useSubmitCheckIn();
+
+  const [step, setStep] = useState<Step>('idle');
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  const [locationError, setLocationError] = useState(false);
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState<ShopWithPhoto | null>(null);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [note, setNote] = useState('');
+  const [result, setResult] = useState<CheckInResult | null>(null);
+
+  // Request location on mount
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setLocationError(true);
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+    })();
+  }, []);
+
+  const getDistance = useCallback(
+    (shop: ShopWithPhoto) =>
+      userLocation
+        ? distanceKm(userLocation.latitude, userLocation.longitude, shop.latitude, shop.longitude)
+        : null,
+    [userLocation],
+  );
+
+  const shopsWithDistance = useMemo(() => {
+    const q = search.toLowerCase();
+    return shops
+      .filter(
+        (s) =>
+          !q ||
+          s.name.toLowerCase().includes(q) ||
+          s.city.toLowerCase().includes(q) ||
+          s.postcode.toLowerCase().includes(q),
+      )
+      .map((s) => ({ ...s, distKm: getDistance(s) }))
+      .sort((a, b) => (a.distKm ?? Infinity) - (b.distKm ?? Infinity));
+  }, [shops, search, getDistance]);
+
+  function selectShop(shop: ShopWithPhoto) {
+    setSelected(shop);
+    setStep('confirming');
+  }
+
+  async function pickPhoto() {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Allow photo access to add a photo to your check-in.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.7,
+    });
+    if (!result.canceled) setPhotoUri(result.assets[0].uri);
+  }
+
+  async function takePhoto() {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Allow camera access to take a photo.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.7,
+    });
+    if (!result.canceled) setPhotoUri(result.assets[0].uri);
+  }
+
+  async function submit() {
+    if (!selected || !user || !userLocation) return;
+    setStep('submitting');
+    try {
+      const checkinResult = await mutation.mutateAsync({
+        userId: user.id,
+        shopId: selected.id,
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        photoUri,
+        notes: note.trim() || undefined,
+      });
+      setResult(checkinResult);
+      setStep('success');
+    } catch (e: any) {
+      setStep('note');
+      Alert.alert('Check-in failed', e.message ?? 'Please try again.');
+    }
+  }
+
+  function reset() {
+    setStep('idle');
+    setSelected(null);
+    setPhotoUri(null);
+    setNote('');
+    setResult(null);
+    setSearch('');
+  }
+
+  const selectedDistance = selected ? getDistance(selected) : null;
+  const withinRange = selectedDistance !== null && selectedDistance * 1000 <= CHECK_IN_RADIUS_M;
+
+  // ── Success ────────────────────────────────────────────────
+  if (step === 'success' && result && selected) {
+    return (
+      <BadgeCelebration
+        pointsEarned={result.pointsEarned}
+        newBadges={result.newBadges}
+        shopName={selected.name}
+        onDone={reset}
+      />
+    );
+  }
+
+  // ── Submitting ─────────────────────────────────────────────
+  if (step === 'submitting') {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#2D5016" />
+        <Text style={styles.submittingText}>Checking in…</Text>
+      </View>
+    );
+  }
+
+  // ── Confirming / Photo / Note ──────────────────────────────
+  if (step !== 'idle' && selected) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <ScrollView contentContainerStyle={styles.flowScroll} keyboardShouldPersistTaps="handled">
+
+            {/* Back */}
+            <TouchableOpacity onPress={reset} style={styles.backButton}>
+              <Text style={styles.backText}>← Back</Text>
+            </TouchableOpacity>
+
+            {/* Shop card */}
+            <View style={styles.shopCard}>
+              <Text style={styles.shopCardName}>{selected.name}</Text>
+              <Text style={styles.shopCardAddress}>{formatAddress(selected)}</Text>
+
+              {/* GPS status */}
+              <View style={[styles.gpsRow, withinRange ? styles.gpsGreen : styles.gpsRed]}>
+                <Text style={styles.gpsIcon}>{withinRange ? '●' : '●'}</Text>
+                <Text style={styles.gpsText}>
+                  {selectedDistance === null
+                    ? 'Acquiring location…'
+                    : withinRange
+                    ? `You're here (${formatDistance(selectedDistance)} away)`
+                    : `Too far away — ${formatDistance(selectedDistance)} (need ≤200m)`}
+                </Text>
+              </View>
+            </View>
+
+            {/* Photo section */}
+            <Text style={styles.sectionLabel}>Photo <Text style={styles.optional}>(optional)</Text></Text>
+            {photoUri ? (
+              <View style={styles.photoPreviewWrap}>
+                <Image source={{ uri: photoUri }} style={styles.photoPreview} />
+                <TouchableOpacity style={styles.removePhoto} onPress={() => setPhotoUri(null)}>
+                  <Text style={styles.removePhotoText}>✕ Remove</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.photoButtons}>
+                <TouchableOpacity style={styles.photoButton} onPress={takePhoto}>
+                  <Text style={styles.photoButtonText}>Take photo</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.photoButton} onPress={pickPhoto}>
+                  <Text style={styles.photoButtonText}>Choose from library</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Note section */}
+            <Text style={styles.sectionLabel}>Note <Text style={styles.optional}>(optional)</Text></Text>
+            <TextInput
+              style={styles.noteInput}
+              placeholder="How was it? What did you order?"
+              value={note}
+              onChangeText={setNote}
+              multiline
+              numberOfLines={3}
+              maxLength={280}
+            />
+            <Text style={styles.charCount}>{note.length}/280</Text>
+
+            {/* Submit */}
+            <TouchableOpacity
+              style={[styles.submitButton, !withinRange && styles.submitButtonDisabled]}
+              onPress={submit}
+              disabled={!withinRange}
+            >
+              <Text style={styles.submitText}>
+                {withinRange ? 'Check in!' : 'Too far away to check in'}
+              </Text>
+            </TouchableOpacity>
+
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Idle — shop picker ─────────────────────────────────────
   return (
-    <View style={styles.container}>
-      <Text>Check In</Text>
-    </View>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.idleHeader}>
+        <Text style={styles.idleTitle}>Check In</Text>
+        <Text style={styles.idleSubtitle}>Select the shop you're visiting</Text>
+      </View>
+
+      <View style={styles.searchWrap}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search shops…"
+          value={search}
+          onChangeText={setSearch}
+          clearButtonMode="while-editing"
+        />
+      </View>
+
+      {locationError && (
+        <Text style={styles.locationError}>
+          Location access denied — distance cannot be shown and check-in range cannot be verified.
+        </Text>
+      )}
+
+      {shopsLoading ? (
+        <ActivityIndicator style={styles.loader} color="#2D5016" />
+      ) : (
+        <FlatList
+          data={shopsWithDistance}
+          keyExtractor={(s) => s.id}
+          renderItem={({ item }) => {
+            const dist = item.distKm;
+            const inRange = dist !== null && dist * 1000 <= CHECK_IN_RADIUS_M;
+            return (
+              <TouchableOpacity style={styles.shopRow} onPress={() => selectShop(item)}>
+                <View style={styles.shopRowInfo}>
+                  <Text style={styles.shopRowName}>{item.name}</Text>
+                  <Text style={styles.shopRowCity}>{item.city}</Text>
+                </View>
+                <View style={styles.shopRowRight}>
+                  {dist !== null && (
+                    <Text style={[styles.shopRowDist, inRange && styles.shopRowDistGreen]}>
+                      {formatDistance(dist)}
+                    </Text>
+                  )}
+                  {inRange && <Text style={styles.nearbyBadge}>Nearby</Text>}
+                </View>
+              </TouchableOpacity>
+            );
+          }}
+          ListEmptyComponent={<Text style={styles.emptyText}>No shops found.</Text>}
+          contentContainerStyle={styles.listContent}
+        />
+      )}
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  flex: { flex: 1 },
+  container: { flex: 1, backgroundColor: '#f8f5f0' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  submittingText: { color: '#555', fontSize: 16 },
+
+  // Idle
+  idleHeader: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
+  idleTitle: { fontSize: 26, fontWeight: '800' },
+  idleSubtitle: { fontSize: 14, color: '#888', marginTop: 2 },
+  searchWrap: { paddingHorizontal: 16, paddingBottom: 8 },
+  searchInput: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  locationError: { fontSize: 13, color: '#c00', paddingHorizontal: 16, marginBottom: 8 },
+  loader: { marginTop: 40 },
+  listContent: { paddingBottom: 24 },
+  shopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 10,
+    padding: 14,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  shopRowInfo: { flex: 1 },
+  shopRowName: { fontSize: 15, fontWeight: '600' },
+  shopRowCity: { fontSize: 13, color: '#888', marginTop: 2 },
+  shopRowRight: { alignItems: 'flex-end', gap: 4 },
+  shopRowDist: { fontSize: 13, color: '#888' },
+  shopRowDistGreen: { color: '#2D5016', fontWeight: '600' },
+  nearbyBadge: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#2D5016',
+    backgroundColor: '#e8f5e9',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  emptyText: { textAlign: 'center', color: '#999', marginTop: 40 },
+
+  // Flow
+  flowScroll: { padding: 20, paddingBottom: 40 },
+  backButton: { marginBottom: 16 },
+  backText: { color: '#2D5016', fontSize: 15, fontWeight: '600' },
+  shopCard: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  shopCardName: { fontSize: 18, fontWeight: '700', marginBottom: 4 },
+  shopCardAddress: { fontSize: 13, color: '#888', marginBottom: 12 },
+  gpsRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 8, padding: 10 },
+  gpsGreen: { backgroundColor: '#e8f5e9' },
+  gpsRed: { backgroundColor: '#fce4e4' },
+  gpsIcon: { fontSize: 10 },
+  gpsText: { fontSize: 13, fontWeight: '600', flex: 1 },
+
+  sectionLabel: { fontSize: 14, fontWeight: '700', color: '#444', marginBottom: 10 },
+  optional: { fontWeight: '400', color: '#999' },
+
+  photoButtons: { flexDirection: 'row', gap: 10, marginBottom: 24 },
+  photoButton: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderStyle: 'dashed',
+  },
+  photoButtonText: { fontSize: 14, color: '#555' },
+  photoPreviewWrap: { marginBottom: 24 },
+  photoPreview: { width: '100%', height: 200, borderRadius: 10 },
+  removePhoto: { marginTop: 8, alignSelf: 'flex-end' },
+  removePhotoText: { fontSize: 13, color: '#c00' },
+
+  noteInput: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    padding: 14,
+    fontSize: 14,
+    textAlignVertical: 'top',
+    minHeight: 90,
+    marginBottom: 4,
+  },
+  charCount: { fontSize: 11, color: '#bbb', textAlign: 'right', marginBottom: 24 },
+
+  submitButton: {
+    backgroundColor: '#2D5016',
+    borderRadius: 14,
+    padding: 18,
+    alignItems: 'center',
+  },
+  submitButtonDisabled: { backgroundColor: '#aaa' },
+  submitText: { color: '#fff', fontWeight: '800', fontSize: 16 },
 });
