@@ -1,0 +1,76 @@
+import React from 'react';
+import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { ShopWithPhoto } from '../../lib/shops';
+import { OpeningHours, isOpenNow, formatDistance, priceLabel, shopPhotoUrl } from '../../utils/shopUtils';
+
+interface Props {
+  shop: ShopWithPhoto;
+  distanceKm?: number;
+  onPress: () => void;
+}
+
+export default function ShopCard({ shop, distanceKm, onPress }: Props) {
+  const hours = shop.opening_hours as unknown as OpeningHours;
+  const open = hours && Object.keys(hours).length > 0 ? isOpenNow(hours) : null;
+
+  return (
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
+      {shop.primary_photo ? (
+        <Image source={{ uri: shopPhotoUrl(shop.primary_photo) }} style={styles.image} />
+      ) : (
+        <View style={[styles.image, styles.imagePlaceholder]}>
+          <Text style={styles.imagePlaceholderText}>No photo</Text>
+        </View>
+      )}
+
+      <View style={styles.info}>
+        <View style={styles.row}>
+          <Text style={styles.name} numberOfLines={1}>{shop.name}</Text>
+          <Text style={styles.price}>{priceLabel(shop.price_range)}</Text>
+        </View>
+
+        <Text style={styles.city} numberOfLines={1}>{shop.city}</Text>
+
+        <View style={styles.row}>
+          {open !== null && (
+            <View style={[styles.badge, open ? styles.badgeOpen : styles.badgeClosed]}>
+              <Text style={styles.badgeText}>{open ? 'Open now' : 'Closed'}</Text>
+            </View>
+          )}
+          {distanceKm !== undefined && (
+            <Text style={styles.distance}>{formatDistance(distanceKm)}</Text>
+          )}
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  image: { width: 90, height: 90 },
+  imagePlaceholder: { backgroundColor: '#f0ede8', alignItems: 'center', justifyContent: 'center' },
+  imagePlaceholderText: { fontSize: 11, color: '#999' },
+  info: { flex: 1, padding: 12, justifyContent: 'space-between' },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  name: { fontSize: 15, fontWeight: '600', flex: 1, marginRight: 8 },
+  price: { fontSize: 13, color: '#666' },
+  city: { fontSize: 13, color: '#888', marginTop: 2 },
+  badge: { borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, marginTop: 6 },
+  badgeOpen: { backgroundColor: '#e8f5e9' },
+  badgeClosed: { backgroundColor: '#fce4e4' },
+  badgeText: { fontSize: 11, fontWeight: '600' },
+  distance: { fontSize: 12, color: '#888', marginTop: 6 },
+});
