@@ -1,20 +1,24 @@
 {
   "expo": {
-    "name": "pie-mash-uk",
+    "name": "Pie & Mash UK",
     "slug": "pie-mash-uk",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "scheme": "pie-mash-uk",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.piemashanduk.app",
+      "usesAppleSignIn": true
     },
     "android": {
+      "package": "com.piemashanduk.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -25,6 +29,9 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-apple-authentication"
+    ]
   }
 }
