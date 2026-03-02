@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -42,6 +42,8 @@ export default function DiscoverScreen({ navigation }: Props) {
     setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
   }, []);
 
+  useEffect(() => { requestLocation(); }, [requestLocation]);
+
   const filtered = useMemo(() => {
     let result = shops;
 
@@ -76,7 +78,7 @@ export default function DiscoverScreen({ navigation }: Props) {
     : DEFAULT_REGION;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       {/* Search bar */}
       <View style={styles.searchRow}>
         <TextInput

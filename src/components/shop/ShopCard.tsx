@@ -26,7 +26,7 @@ export default function ShopCard({ shop, distanceKm, onPress }: Props) {
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>{shop.name}</Text>
 
-        <Text style={styles.city} numberOfLines={1}>{shop.city}</Text>
+        <Text style={styles.city} numberOfLines={1}>{shop.city}  ·  {shop.postcode}</Text>
 
         <View style={styles.row}>
           {open !== null && (
