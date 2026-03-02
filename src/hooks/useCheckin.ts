@@ -6,9 +6,9 @@ export function useSubmitCheckIn() {
 
   return useMutation({
     mutationFn: (params: SubmitCheckInParams) => submitCheckIn(params),
-    onSuccess: () => {
-      // Invalidate profile so points update everywhere
+    onSuccess: (_, params) => {
       queryClient.invalidateQueries({ queryKey: ['profile'] });
+      queryClient.invalidateQueries({ queryKey: ['userCheckins', params.userId] });
     },
   });
 }
