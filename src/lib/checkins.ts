@@ -112,18 +112,37 @@ export async function submitCheckIn(params: SubmitCheckInParams): Promise<CheckI
       .eq('id', userId)
       .single();
     if (profile) {
+      const newVisits = profile.total_visits + 1;
+      const newUniqueShops = isFirstVisit
+        ? profile.unique_shops_visited + 1
+        : profile.unique_shops_visited;
+
       await supabase.from('profiles').update({
         total_points: profile.total_points + pointsEarned,
-        total_visits: profile.total_visits + 1,
-        unique_shops_visited: isFirstVisit
-          ? profile.unique_shops_visited + 1
-          : profile.unique_shops_visited,
+        total_visits: newVisits,
+        unique_shops_visited: newUniqueShops,
       }).eq('id', userId);
+
+      // Award badges client-side (fallback when badge trigger not yet applied).
+      const { data: activeBadges } = await supabase
+        .from('badges')
+        .select('id, criteria_type, criteria_value')
+        .eq('is_active', true);
+
+      const toAward = (activeBadges ?? []).filter((b: any) => {
+        if (beforeBadges.has(b.id)) return false;
+        if (b.criteria_type === 'total_checkins') return newVisits >= b.criteria_value;
+        if (b.criteria_type === 'unique_shops') return newUniqueShops >= b.criteria_value;
+        return false;
+      });
+
+      if (toAward.length > 0) {
+        await supabase.from('user_badges').insert(
+          toAward.map((b: any) => ({ user_id: userId, badge_id: b.id }))
+        );
+      }
     }
   }
-
-  // Fire award-badges as a best-effort call; errors are non-fatal.
-  supabase.functions.invoke('award-badges', { body: { record: checkin } }).catch(() => {});
 
   // Diff badges to find newly awarded ones
   const afterBadgeIds = await getEarnedBadgeIds(userId);
