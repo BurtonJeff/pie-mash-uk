@@ -29,13 +29,13 @@ export default function BadgeItem({ badge, earned, awardedAt, profile }: Props) 
     <View style={[styles.container, !earned && styles.locked]}>
       {/* Icon */}
       <View style={[styles.iconWrap, earned ? styles.iconEarned : styles.iconLocked]}>
-        {badge.icon_url ? (
+        {badge.icon_url?.startsWith('http') ? (
           <Image
             source={{ uri: badge.icon_url }}
             style={[styles.icon, !earned && styles.iconGrey]}
           />
         ) : (
-          <Text style={styles.iconEmoji}>🏅</Text>
+          <Text style={styles.iconEmoji}>{badge.icon_url || '🏅'}</Text>
         )}
       </View>
 

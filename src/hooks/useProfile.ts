@@ -7,6 +7,7 @@ export function useProfile(userId: string) {
     queryKey: ['profile', userId],
     queryFn: () => fetchProfile(userId),
     enabled: !!userId,
+    refetchOnMount: 'always',
   });
 }
 
