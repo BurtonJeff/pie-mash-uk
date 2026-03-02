@@ -44,7 +44,7 @@ export default function CommunityScreen({ navigation }: Props) {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       {/* Tab bar */}
       <View style={styles.tabBar}>
         {TABS.map(({ key, label }) => (

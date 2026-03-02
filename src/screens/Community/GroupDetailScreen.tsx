@@ -86,7 +86,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       {/* Sub-tab bar */}
       <View style={styles.subTabBar}>
         {SUB_TABS.map(({ key, label }) => (

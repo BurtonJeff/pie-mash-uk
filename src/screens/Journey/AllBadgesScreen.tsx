@@ -65,7 +65,7 @@ export default function AllBadgesScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       {/* Filter tabs */}
       <View style={styles.filterRow}>
         {(['all', 'earned', 'locked'] as Filter[]).map((f) => (

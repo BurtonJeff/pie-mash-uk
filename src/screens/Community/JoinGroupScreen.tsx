@@ -27,7 +27,7 @@ export default function JoinGroupScreen({ navigation }: Props) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.inner}>
         <Text style={styles.emoji}>👥</Text>
         <Text style={styles.title}>Join a Group</Text>

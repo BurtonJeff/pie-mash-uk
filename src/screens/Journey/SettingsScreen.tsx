@@ -118,7 +118,7 @@ export default function SettingsScreen({ navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
         {/* ── Account ──────────────────────────────────── */}

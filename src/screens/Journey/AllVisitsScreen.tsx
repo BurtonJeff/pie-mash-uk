@@ -24,7 +24,7 @@ export default function AllVisitsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <FlatList
         data={checkins}
         keyExtractor={(c) => c.id}
