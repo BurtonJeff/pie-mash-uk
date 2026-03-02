@@ -19,6 +19,10 @@ import {
   addChallenge,
   updateChallenge,
   ChallengeFormData,
+  fetchShopPhotos,
+  uploadShopPhoto,
+  deleteShopPhoto,
+  setShopPhotoPrimary,
 } from '../lib/admin';
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
@@ -179,6 +183,69 @@ export function useUpdateChallenge() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['adminChallenges'] });
       qc.invalidateQueries({ queryKey: ['adminChallenge'] });
+    },
+  });
+}
+
+// ─── Shop Photos ──────────────────────────────────────────────────────────────
+
+export function useShopPhotos(shopId: string | undefined) {
+  return useQuery({
+    queryKey: ['shopPhotos', shopId],
+    queryFn: () => fetchShopPhotos(shopId!),
+    enabled: !!shopId,
+    staleTime: 0,
+  });
+}
+
+export function useUploadShopPhoto() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      shopId,
+      uri,
+      isFirst,
+    }: {
+      shopId: string;
+      uri: string;
+      isFirst: boolean;
+    }) => uploadShopPhoto(shopId, uri, isFirst),
+    onSuccess: (_, { shopId }) => {
+      qc.invalidateQueries({ queryKey: ['shopPhotos', shopId] });
+      qc.invalidateQueries({ queryKey: ['adminShops'] });
+      qc.invalidateQueries({ queryKey: ['adminShop', shopId] });
+    },
+  });
+}
+
+export function useDeleteShopPhoto() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      photoId,
+      storagePath,
+    }: {
+      photoId: string;
+      storagePath: string;
+      shopId: string;
+    }) => deleteShopPhoto(photoId, storagePath),
+    onSuccess: (_, { shopId }) => {
+      qc.invalidateQueries({ queryKey: ['shopPhotos', shopId] });
+      qc.invalidateQueries({ queryKey: ['adminShops'] });
+      qc.invalidateQueries({ queryKey: ['adminShop', shopId] });
+    },
+  });
+}
+
+export function useSetShopPhotoPrimary() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ shopId, photoId }: { shopId: string; photoId: string }) =>
+      setShopPhotoPrimary(shopId, photoId),
+    onSuccess: (_, { shopId }) => {
+      qc.invalidateQueries({ queryKey: ['shopPhotos', shopId] });
+      qc.invalidateQueries({ queryKey: ['adminShops'] });
+      qc.invalidateQueries({ queryKey: ['adminShop', shopId] });
     },
   });
 }

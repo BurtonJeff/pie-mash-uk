@@ -1,3 +1,4 @@
+import * as FileSystem from 'expo-file-system';
 import { supabase } from './supabase';
 import { Shop, Badge } from '../types/database';
 
@@ -330,6 +331,75 @@ export async function addChallenge(data: ChallengeFormData): Promise<void> {
     criteria: {},
     group_id: null,
   });
+
+  if (error) throw error;
+}
+
+// ─── Shop Photos ──────────────────────────────────────────────────────────────
+
+export interface ShopPhoto {
+  id: string;
+  storage_path: string;
+  is_primary: boolean;
+}
+
+export async function fetchShopPhotos(shopId: string): Promise<ShopPhoto[]> {
+  const { data, error } = await supabase
+    .from('shop_photos')
+    .select('id, storage_path, is_primary')
+    .eq('shop_id', shopId)
+    .order('is_primary', { ascending: false })
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as ShopPhoto[];
+}
+
+export async function uploadShopPhoto(shopId: string, uri: string, isFirst: boolean): Promise<ShopPhoto> {
+  const ext = uri.split('.').pop()?.toLowerCase() ?? 'jpg';
+  const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
+  const path = `shops/${shopId}/${Date.now()}.${ext}`;
+
+  const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' as any });
+  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+
+  const { error: storageError } = await supabase.storage
+    .from('shop-photos')
+    .upload(path, bytes, { contentType, upsert: false });
+
+  if (storageError) throw storageError;
+
+  const { data, error } = await supabase
+    .from('shop_photos')
+    .insert({ shop_id: shopId, storage_path: path, is_primary: isFirst })
+    .select('id, storage_path, is_primary')
+    .single();
+
+  if (error) throw error;
+  return data as ShopPhoto;
+}
+
+export async function deleteShopPhoto(photoId: string, storagePath: string): Promise<void> {
+  await supabase.storage.from('shop-photos').remove([storagePath]);
+
+  const { error } = await supabase
+    .from('shop_photos')
+    .delete()
+    .eq('id', photoId);
+
+  if (error) throw error;
+}
+
+export async function setShopPhotoPrimary(shopId: string, photoId: string): Promise<void> {
+  await supabase
+    .from('shop_photos')
+    .update({ is_primary: false })
+    .eq('shop_id', shopId);
+
+  const { error } = await supabase
+    .from('shop_photos')
+    .update({ is_primary: true })
+    .eq('id', photoId);
 
   if (error) throw error;
 }

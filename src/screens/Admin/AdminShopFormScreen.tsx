@@ -8,11 +8,23 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AdminStackParamList } from '../../navigation/AdminNavigator';
-import { useAddShop, useUpdateShop, useAdminShopById } from '../../hooks/useAdmin';
-import { ShopFormData } from '../../lib/admin';
+import {
+  useAddShop,
+  useUpdateShop,
+  useAdminShopById,
+  useShopPhotos,
+  useUploadShopPhoto,
+  useDeleteShopPhoto,
+  useSetShopPhotoPrimary,
+} from '../../hooks/useAdmin';
+import { ShopFormData, ShopPhoto } from '../../lib/admin';
+import { shopPhotoUrl } from '../../utils/shopUtils';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'AdminShopForm'>;
 
@@ -23,6 +35,10 @@ export default function AdminShopFormScreen({ navigation, route }: Props) {
   const addShop = useAddShop();
   const updateShop = useUpdateShop();
   const { data: existingShop, isLoading: shopLoading } = useAdminShopById(shopId);
+  const { data: photos = [] } = useShopPhotos(shopId);
+  const uploadPhoto = useUploadShopPhoto();
+  const deletePhoto = useDeleteShopPhoto();
+  const setPrimary = useSetShopPhotoPrimary();
 
   const [form, setForm] = useState<ShopFormData>({
     name: '',
@@ -105,6 +121,64 @@ export default function AdminShopFormScreen({ navigation, route }: Props) {
         },
       });
     }
+  };
+
+  const handleAddPhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Please allow access to your photo library.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (result.canceled || !shopId) return;
+
+    uploadPhoto.mutate(
+      { shopId, uri: result.assets[0].uri, isFirst: photos.length === 0 },
+      {
+        onError: (e: any) => {
+          Alert.alert('Upload failed', e.message ?? 'Could not upload photo. Please try again.');
+        },
+      },
+    );
+  };
+
+  const handleDeletePhoto = (photo: ShopPhoto) => {
+    Alert.alert('Delete Photo', 'Are you sure you want to delete this photo?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          deletePhoto.mutate(
+            { photoId: photo.id, storagePath: photo.storage_path, shopId: shopId! },
+            {
+              onError: (e: any) => {
+                Alert.alert('Error', e.message ?? 'Could not delete photo.');
+              },
+            },
+          );
+        },
+      },
+    ]);
+  };
+
+  const handleSetPrimary = (photo: ShopPhoto) => {
+    if (photo.is_primary || !shopId) return;
+    setPrimary.mutate(
+      { shopId, photoId: photo.id },
+      {
+        onError: (e: any) => {
+          Alert.alert('Error', e.message ?? 'Could not set primary photo.');
+        },
+      },
+    );
   };
 
   const isPending = addShop.isPending || updateShop.isPending;
@@ -218,6 +292,80 @@ export default function AdminShopFormScreen({ navigation, route }: Props) {
         keyboardType="numeric"
       />
 
+      {/* Photos — only available when editing an existing shop */}
+      {isEditing && (
+        <>
+          <FieldLabel label="Photos" />
+          <View style={styles.photoRow}>
+            {photos.map((photo) => (
+              <View key={photo.id} style={styles.photoTile}>
+                <Image
+                  source={{ uri: shopPhotoUrl(photo.storage_path) }}
+                  style={styles.photoThumb}
+                />
+
+                {/* Primary star */}
+                <TouchableOpacity
+                  style={styles.photoStar}
+                  onPress={() => handleSetPrimary(photo)}
+                  disabled={setPrimary.isPending}
+                >
+                  <Ionicons
+                    name={photo.is_primary ? 'star' : 'star-outline'}
+                    size={15}
+                    color={photo.is_primary ? '#f5a623' : '#fff'}
+                  />
+                </TouchableOpacity>
+
+                {/* Delete button */}
+                <TouchableOpacity
+                  style={styles.photoDelete}
+                  onPress={() => handleDeletePhoto(photo)}
+                  disabled={deletePhoto.isPending}
+                >
+                  <Ionicons name="close-circle" size={20} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            ))}
+
+            {/* Add photo tile */}
+            <TouchableOpacity
+              style={styles.photoAddTile}
+              onPress={handleAddPhoto}
+              disabled={uploadPhoto.isPending}
+            >
+              {uploadPhoto.isPending ? (
+                <ActivityIndicator color="#2D5016" />
+              ) : (
+                <>
+                  <Ionicons name="camera-outline" size={26} color="#2D5016" />
+                  <Text style={styles.photoAddText}>Add</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {photos.length === 0 && !uploadPhoto.isPending && (
+            <Text style={styles.noPhotosText}>
+              No photos yet. Tap "Add" to upload one. The first photo will become the primary.
+            </Text>
+          )}
+          {photos.length > 0 && (
+            <Text style={styles.photoHint}>
+              Tap ★ to set as primary (shown in listings). Tap ✕ to delete.
+            </Text>
+          )}
+        </>
+      )}
+
+      {!isEditing && (
+        <View style={styles.photoNote}>
+          <Text style={styles.photoNoteText}>
+            Photos can be added after saving the shop.
+          </Text>
+        </View>
+      )}
+
       <TouchableOpacity
         style={[styles.submitButton, isPending && styles.submitButtonDisabled]}
         onPress={handleSubmit}
@@ -244,6 +392,7 @@ function FieldLabel({ label, required }: { label: string; required?: boolean }) 
   );
 }
 
+const TILE_SIZE = 90;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0ede8' },
@@ -272,6 +421,74 @@ const styles = StyleSheet.create({
   multiline: {
     minHeight: 80,
     textAlignVertical: 'top',
+  },
+
+  // ── Photos ────────────────────────────────────────────────
+  photoRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  photoTile: {
+    width: TILE_SIZE,
+    height: TILE_SIZE,
+    borderRadius: 10,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  photoThumb: {
+    width: TILE_SIZE,
+    height: TILE_SIZE,
+  },
+  photoStar: {
+    position: 'absolute',
+    bottom: 4,
+    left: 4,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderRadius: 10,
+    padding: 3,
+  },
+  photoDelete: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+  },
+  photoAddTile: {
+    width: TILE_SIZE,
+    height: TILE_SIZE,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#2D5016',
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  photoAddText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#2D5016',
+  },
+  noPhotosText: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 8,
+    lineHeight: 18,
+  },
+  photoHint: {
+    fontSize: 11,
+    color: '#aaa',
+    marginTop: 6,
+  },
+  photoNote: {
+    backgroundColor: '#eef4e8',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 20,
+  },
+  photoNoteText: {
+    fontSize: 13,
+    color: '#4a7a2a',
   },
 
   submitButton: {
