@@ -31,6 +31,9 @@ export default function HomeScreen({ navigation }: Props) {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        {/* Subtitle */}
+        <Text style={styles.subtitle}>Preserving a Great British Tradition, One Visit at a Time</Text>
+
         {/* Stats row */}
         {profile && (
           <View style={styles.statsRow}>
@@ -86,6 +89,8 @@ function StatPill({ label, value }: { label: string; value: number }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f8f5f0' },
   content: { padding: 20, paddingBottom: 40 },
+
+  subtitle: { fontSize: 15, color: '#888', fontStyle: 'italic', marginBottom: 20 },
 
   statsRow: {
     flexDirection: 'row',

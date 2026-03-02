@@ -16,7 +16,7 @@ export default function HomeNavigator() {
       <Stack.Screen
         name="HomeMain"
         component={HomeScreen}
-        options={{ title: 'Home', headerLargeTitle: true }}
+        options={{ title: 'Pie and Mash', headerLargeTitle: true }}
       />
       <Stack.Screen
         name="ShopDetail"
