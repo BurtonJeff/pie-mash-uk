@@ -96,7 +96,6 @@ export interface ShopFormData {
   latitude: string;
   longitude: string;
   price_range: 1 | 2 | 3 | 4;
-  features: { is_takeaway: boolean; has_seating: boolean; has_parking: boolean };
 }
 
 export async function fetchAdminShopById(shopId: string): Promise<AdminShop> {
@@ -136,7 +135,6 @@ export async function addShop(data: ShopFormData): Promise<void> {
     latitude: parseFloat(data.latitude),
     longitude: parseFloat(data.longitude),
     price_range: data.price_range,
-    features: data.features,
     opening_hours: {},
     is_active: true,
     is_featured: false,
@@ -160,7 +158,6 @@ export async function updateShop(shopId: string, data: ShopFormData): Promise<vo
       latitude: parseFloat(data.latitude),
       longitude: parseFloat(data.longitude),
       price_range: data.price_range,
-      features: data.features,
     })
     .eq('id', shopId);
 

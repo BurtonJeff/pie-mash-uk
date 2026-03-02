@@ -72,7 +72,7 @@ export default function ShopDetailScreen({ route, navigation }: Props) {
   const photos = shop.photos ?? [];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
         {/* Hero photo */}
@@ -151,20 +151,6 @@ export default function ShopDetailScreen({ route, navigation }: Props) {
                 </TouchableOpacity>
               )}
 
-              {/* Features */}
-              {shop.features && Object.keys(shop.features).length > 0 && (
-                <View style={styles.features}>
-                  {Object.entries(shop.features as Record<string, boolean>)
-                    .filter(([, v]) => v)
-                    .map(([key]) => (
-                      <View key={key} style={styles.featureChip}>
-                        <Text style={styles.featureText}>
-                          {key.charAt(0).toUpperCase() + key.slice(1)}
-                        </Text>
-                      </View>
-                    ))}
-                </View>
-              )}
 
               {shop.description ? (
                 <Text style={styles.description}>{shop.description}</Text>
@@ -260,9 +246,6 @@ const styles = StyleSheet.create({
   infoValue: { flex: 1, fontSize: 14, color: '#222' },
   infoLink: { color: '#2D5016', textDecorationLine: 'underline' },
 
-  features: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16 },
-  featureChip: { backgroundColor: '#f0ede8', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5 },
-  featureText: { fontSize: 13, color: '#555' },
 
   description: { fontSize: 14, color: '#444', lineHeight: 22, marginTop: 16 },
   founded: { fontSize: 15, fontWeight: '600', marginBottom: 8 },

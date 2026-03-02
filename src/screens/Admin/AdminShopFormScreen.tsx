@@ -6,7 +6,6 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  Switch,
   Alert,
   ActivityIndicator,
 } from 'react-native';
@@ -37,7 +36,6 @@ export default function AdminShopFormScreen({ navigation, route }: Props) {
     latitude: '',
     longitude: '',
     price_range: 1,
-    features: { is_takeaway: false, has_seating: false, has_parking: false },
   });
 
   useLayoutEffect(() => {
@@ -58,23 +56,12 @@ export default function AdminShopFormScreen({ navigation, route }: Props) {
         latitude: existingShop.latitude.toString(),
         longitude: existingShop.longitude.toString(),
         price_range: existingShop.price_range,
-        features: {
-          is_takeaway: !!(existingShop.features as any)?.is_takeaway,
-          has_seating: !!(existingShop.features as any)?.has_seating,
-          has_parking: !!(existingShop.features as any)?.has_parking,
-        },
       });
     }
   }, [existingShop]);
 
   const set = (key: keyof ShopFormData, value: any) =>
     setForm((prev) => ({ ...prev, [key]: value }));
-
-  const setFeature = (key: keyof ShopFormData['features'], value: boolean) =>
-    setForm((prev) => ({
-      ...prev,
-      features: { ...prev.features, [key]: value },
-    }));
 
   const validate = (): string | null => {
     if (!form.name.trim()) return 'Name is required.';
@@ -231,27 +218,6 @@ export default function AdminShopFormScreen({ navigation, route }: Props) {
         keyboardType="numeric"
       />
 
-      <FieldLabel label="Features" />
-      <View style={styles.switchGroup}>
-        <SwitchRow
-          label="Takeaway"
-          value={form.features.is_takeaway}
-          onValueChange={(v) => setFeature('is_takeaway', v)}
-        />
-        <View style={styles.switchSep} />
-        <SwitchRow
-          label="Seating"
-          value={form.features.has_seating}
-          onValueChange={(v) => setFeature('has_seating', v)}
-        />
-        <View style={styles.switchSep} />
-        <SwitchRow
-          label="Parking"
-          value={form.features.has_parking}
-          onValueChange={(v) => setFeature('has_parking', v)}
-        />
-      </View>
-
       <TouchableOpacity
         style={[styles.submitButton, isPending && styles.submitButtonDisabled]}
         onPress={handleSubmit}
@@ -278,27 +244,6 @@ function FieldLabel({ label, required }: { label: string; required?: boolean }) 
   );
 }
 
-function SwitchRow({
-  label,
-  value,
-  onValueChange,
-}: {
-  label: string;
-  value: boolean;
-  onValueChange: (v: boolean) => void;
-}) {
-  return (
-    <View style={styles.switchRow}>
-      <Text style={styles.switchLabel}>{label}</Text>
-      <Switch
-        value={value}
-        onValueChange={onValueChange}
-        trackColor={{ false: '#ddd', true: '#2D5016' }}
-        thumbColor="#fff"
-      />
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0ede8' },
@@ -327,27 +272,6 @@ const styles = StyleSheet.create({
   multiline: {
     minHeight: 80,
     textAlignVertical: 'top',
-  },
-
-  switchGroup: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#e0ddd8',
-    overflow: 'hidden',
-  },
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  switchLabel: { fontSize: 15, color: '#1a1a1a' },
-  switchSep: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: '#e8e8e8',
-    marginLeft: 14,
   },
 
   submitButton: {
