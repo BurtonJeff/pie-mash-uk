@@ -12,11 +12,11 @@ const Stack = createNativeStackNavigator<DiscoverStackParamList>();
 
 export default function DiscoverNavigator() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator screenOptions={{ headerTitleStyle: { fontSize: 22 } }}>
       <Stack.Screen
         name="DiscoverHome"
         component={DiscoverScreen}
-        options={{ title: 'Discover', headerLargeTitle: true }}
+        options={{ title: 'Discover' }}
       />
       <Stack.Screen
         name="ShopDetail"

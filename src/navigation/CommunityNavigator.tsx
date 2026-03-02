@@ -16,7 +16,7 @@ const Stack = createNativeStackNavigator<CommunityStackParamList>();
 
 export default function CommunityNavigator() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator screenOptions={{ headerTitleStyle: { fontSize: 22 } }}>
       <Stack.Screen name="CommunityHome" component={CommunityScreen} options={{ title: 'Community' }} />
       <Stack.Screen name="GroupDetail" component={GroupDetailScreen} options={{ title: '' }} />
       <Stack.Screen name="CreateGroup" component={CreateGroupScreen} options={{ title: 'Create Group' }} />

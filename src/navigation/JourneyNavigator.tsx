@@ -20,7 +20,7 @@ const Stack = createNativeStackNavigator<JourneyStackParamList>();
 
 export default function JourneyNavigator() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator screenOptions={{ headerTitleStyle: { fontSize: 22 } }}>
       <Stack.Screen name="JourneyHome" component={JourneyScreen} options={{ title: 'My Journey' }} />
       <Stack.Screen name="AllBadges" component={AllBadgesScreen} options={{ title: 'Badge Collection' }} />
       <Stack.Screen name="AllVisits" component={AllVisitsScreen} options={{ title: 'Visit History' }} />

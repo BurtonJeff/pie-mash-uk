@@ -12,11 +12,11 @@ const Stack = createNativeStackNavigator<HomeStackParamList>();
 
 export default function HomeNavigator() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator screenOptions={{ headerTitleStyle: { fontSize: 22 } }}>
       <Stack.Screen
         name="HomeMain"
         component={HomeScreen}
-        options={{ title: 'Pie and Mash', headerLargeTitle: true }}
+        options={{ title: 'Pie and Mash' }}
       />
       <Stack.Screen
         name="ShopDetail"
