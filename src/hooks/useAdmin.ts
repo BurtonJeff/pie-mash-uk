@@ -214,6 +214,8 @@ export function useUploadShopPhoto() {
       qc.invalidateQueries({ queryKey: ['shopPhotos', shopId] });
       qc.invalidateQueries({ queryKey: ['adminShops'] });
       qc.invalidateQueries({ queryKey: ['adminShop', shopId] });
+      qc.invalidateQueries({ queryKey: ['shops'] });
+      qc.invalidateQueries({ queryKey: ['shop', shopId] });
     },
   });
 }
@@ -233,6 +235,8 @@ export function useDeleteShopPhoto() {
       qc.invalidateQueries({ queryKey: ['shopPhotos', shopId] });
       qc.invalidateQueries({ queryKey: ['adminShops'] });
       qc.invalidateQueries({ queryKey: ['adminShop', shopId] });
+      qc.invalidateQueries({ queryKey: ['shops'] });
+      qc.invalidateQueries({ queryKey: ['shop', shopId] });
     },
   });
 }
@@ -246,6 +250,8 @@ export function useSetShopPhotoPrimary() {
       qc.invalidateQueries({ queryKey: ['shopPhotos', shopId] });
       qc.invalidateQueries({ queryKey: ['adminShops'] });
       qc.invalidateQueries({ queryKey: ['adminShop', shopId] });
+      qc.invalidateQueries({ queryKey: ['shops'] });
+      qc.invalidateQueries({ queryKey: ['shop', shopId] });
     },
   });
 }
