@@ -1,4 +1,3 @@
-import * as FileSystem from 'expo-file-system';
 import { supabase } from './supabase';
 import { Shop, Badge } from '../types/database';
 
@@ -360,12 +359,12 @@ export async function uploadShopPhoto(shopId: string, uri: string, isFirst: bool
   const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
   const path = `shops/${shopId}/${Date.now()}.${ext}`;
 
-  const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' as any });
-  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  const response = await fetch(uri);
+  const blob = await response.blob();
 
   const { error: storageError } = await supabase.storage
     .from('shop-photos')
-    .upload(path, bytes, { contentType, upsert: false });
+    .upload(path, blob, { contentType, upsert: false });
 
   if (storageError) throw storageError;
 

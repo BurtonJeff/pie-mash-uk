@@ -1,4 +1,3 @@
-import * as FileSystem from 'expo-file-system';
 import { supabase } from './supabase';
 import { CheckIn, Badge } from '../types/database';
 
@@ -22,12 +21,12 @@ async function uploadCheckinPhoto(userId: string, uri: string): Promise<string> 
   const ext = uri.split('.').pop() ?? 'jpg';
   const path = `${userId}/${Date.now()}.${ext}`;
 
-  const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' as any });
-  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  const response = await fetch(uri);
+  const blob = await response.blob();
 
   const { error } = await supabase.storage
     .from('checkin-photos')
-    .upload(path, bytes, { contentType: `image/${ext}`, upsert: false });
+    .upload(path, blob, { contentType: `image/${ext}`, upsert: false });
 
   if (error) throw error;
   return path;
