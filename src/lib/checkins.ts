@@ -92,7 +92,36 @@ export async function submitCheckIn(params: SubmitCheckInParams): Promise<CheckI
 
   if (error) throw error;
 
-  // points_earned and profile totals are set by the DB trigger on insert.
+  // If the DB trigger ran, points_earned will already be > 0.
+  // Otherwise (trigger migration not yet applied) calculate and apply here.
+  let pointsEarned = checkin.points_earned;
+  if (pointsEarned === 0) {
+    // Count all checkins for this shop by this user (new row is now in DB).
+    const { count: shopCount } = await supabase
+      .from('checkins')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('shop_id', shopId);
+    const isFirstVisit = (shopCount ?? 1) === 1;
+    pointsEarned = 10 + (isFirstVisit ? 25 : 0);
+
+    // Update profile totals directly (users have UPDATE permission on own profile).
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('total_points, total_visits, unique_shops_visited')
+      .eq('id', userId)
+      .single();
+    if (profile) {
+      await supabase.from('profiles').update({
+        total_points: profile.total_points + pointsEarned,
+        total_visits: profile.total_visits + 1,
+        unique_shops_visited: isFirstVisit
+          ? profile.unique_shops_visited + 1
+          : profile.unique_shops_visited,
+      }).eq('id', userId);
+    }
+  }
+
   // Fire award-badges as a best-effort call; errors are non-fatal.
   supabase.functions.invoke('award-badges', { body: { record: checkin } }).catch(() => {});
 
@@ -103,7 +132,7 @@ export async function submitCheckIn(params: SubmitCheckInParams): Promise<CheckI
 
   return {
     checkin: checkin as CheckIn,
-    pointsEarned: checkin.points_earned,
+    pointsEarned,
     newBadges,
   };
 }
