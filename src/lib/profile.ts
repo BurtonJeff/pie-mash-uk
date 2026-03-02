@@ -12,6 +12,22 @@ export async function fetchProfile(userId: string): Promise<Profile> {
     .select('*')
     .eq('id', userId)
     .single();
+
+  // Profile missing — auto-create from auth user data
+  if (error?.code === 'PGRST116' || (!data && error)) {
+    const { data: { user } } = await supabase.auth.getUser();
+    const username = user?.user_metadata?.username
+      ?? user?.email?.split('@')[0]
+      ?? 'user';
+    const { data: created, error: createError } = await supabase
+      .from('profiles')
+      .insert({ id: userId, username, display_name: username })
+      .select()
+      .single();
+    if (createError) throw createError;
+    return created as Profile;
+  }
+
   if (error) throw error;
   return data as Profile;
 }

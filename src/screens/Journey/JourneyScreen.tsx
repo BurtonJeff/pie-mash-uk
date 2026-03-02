@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   SafeAreaView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { JourneyStackParamList } from '../../navigation/JourneyNavigator';
 import { useAuthStore } from '../../store/authStore';
@@ -36,14 +37,14 @@ function Initials({ name }: { name: string }) {
 }
 
 export default function JourneyScreen({ navigation }: Props) {
-  const { user } = useAuthStore();
+  const { user, initialized } = useAuthStore();
   const userId = user?.id ?? '';
 
   const { data: profile, isLoading: profileLoading } = useProfile(userId);
   const { data: userBadges = [] } = useUserBadges(userId);
   const { data: checkins = [], isLoading: checkinsLoading } = useUserCheckins(userId);
 
-  if (profileLoading) {
+  if (!initialized || profileLoading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#2D5016" />
@@ -81,6 +82,9 @@ export default function JourneyScreen({ navigation }: Props) {
             </View>
             <TouchableOpacity onPress={() => navigation.navigate('EditProfile')} style={styles.editButton}>
               <Text style={styles.editButtonText}>Edit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.settingsIconButton}>
+              <Ionicons name="settings-outline" size={22} color="#555" />
             </TouchableOpacity>
           </View>
 
@@ -234,6 +238,8 @@ const styles = StyleSheet.create({
   emptyEmoji: { fontSize: 36, marginBottom: 8 },
   emptyTitle: { fontSize: 15, fontWeight: '700', marginBottom: 4 },
   emptyBody: { fontSize: 13, color: '#888', textAlign: 'center', lineHeight: 18 },
+
+  settingsIconButton: { marginLeft: 10, padding: 4 },
 
   signOutButton: {
     marginHorizontal: 16,

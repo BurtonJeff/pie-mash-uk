@@ -1,6 +1,4 @@
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import JourneyScreen from '../screens/Journey/JourneyScreen';
 import AllBadgesScreen from '../screens/Journey/AllBadgesScreen';
@@ -23,18 +21,7 @@ const Stack = createNativeStackNavigator<JourneyStackParamList>();
 export default function JourneyNavigator() {
   return (
     <Stack.Navigator>
-      <Stack.Screen
-        name="JourneyHome"
-        component={JourneyScreen}
-        options={({ navigation }) => ({
-          title: 'My Journey',
-          headerRight: () => (
-            <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
-              <Ionicons name="settings-outline" size={22} color="#2D5016" />
-            </TouchableOpacity>
-          ),
-        })}
-      />
+      <Stack.Screen name="JourneyHome" component={JourneyScreen} options={{ title: 'My Journey' }} />
       <Stack.Screen name="AllBadges" component={AllBadgesScreen} options={{ title: 'Badge Collection' }} />
       <Stack.Screen name="AllVisits" component={AllVisitsScreen} options={{ title: 'Visit History' }} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit Profile' }} />
