@@ -1,3 +1,4 @@
+import { File } from 'expo-file-system/next';
 import { supabase } from './supabase';
 import { CheckIn, Badge } from '../types/database';
 
@@ -21,12 +22,12 @@ async function uploadCheckinPhoto(userId: string, uri: string): Promise<string> 
   const ext = uri.split('.').pop() ?? 'jpg';
   const path = `${userId}/${Date.now()}.${ext}`;
 
-  const response = await fetch(uri);
-  const blob = await response.blob();
+  const file = new File(uri);
+  const bytes = await file.bytes();
 
   const { error } = await supabase.storage
     .from('checkin-photos')
-    .upload(path, blob, { contentType: `image/${ext}`, upsert: false });
+    .upload(path, bytes, { contentType: `image/${ext}`, upsert: false });
 
   if (error) throw error;
   return path;
