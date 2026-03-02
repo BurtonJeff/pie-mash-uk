@@ -79,20 +79,9 @@ export async function submitCheckIn(params: SubmitCheckInParams): Promise<CheckI
 
   if (error) throw error;
 
-  // Invoke server-side edge functions to calculate points and award badges
-  try {
-    await supabase.functions.invoke('calculate-points', { body: { record: checkin } });
-    await supabase.functions.invoke('award-badges', { body: { record: checkin } });
-  } catch {
-    // Non-fatal — points/badges may be eventually consistent via webhooks
-  }
-
-  // Fetch updated checkin to get points_earned (set by calculate-points)
-  const { data: updated } = await supabase
-    .from('checkins')
-    .select('points_earned')
-    .eq('id', checkin.id)
-    .single();
+  // points_earned and profile totals are set by the DB trigger on insert.
+  // Fire award-badges as a best-effort call; errors are non-fatal.
+  supabase.functions.invoke('award-badges', { body: { record: checkin } }).catch(() => {});
 
   // Diff badges to find newly awarded ones
   const afterBadgeIds = await getEarnedBadgeIds(userId);
@@ -101,7 +90,7 @@ export async function submitCheckIn(params: SubmitCheckInParams): Promise<CheckI
 
   return {
     checkin: checkin as CheckIn,
-    pointsEarned: updated?.points_earned ?? 10,
+    pointsEarned: checkin.points_earned,
     newBadges,
   };
 }
