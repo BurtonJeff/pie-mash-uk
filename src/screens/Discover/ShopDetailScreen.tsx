@@ -8,9 +8,9 @@ import {
   StyleSheet,
   ActivityIndicator,
   Linking,
-  SafeAreaView,
   Dimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { DiscoverStackParamList } from '../../navigation/DiscoverNavigator';
 import { useShop } from '../../hooks/useShops';

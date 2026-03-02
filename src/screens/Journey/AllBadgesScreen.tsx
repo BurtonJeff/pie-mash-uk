@@ -6,8 +6,8 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/authStore';
 import { useAllBadges, useUserBadges, useProfile } from '../../hooks/useProfile';
 import BadgeItem from '../../components/journey/BadgeItem';
