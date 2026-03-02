@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Switch,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -41,6 +42,7 @@ export default function AdminShopsScreen({ navigation }: Props) {
     setFeaturedPending(shopId);
     setFeatured.mutate(shopId, {
       onSettled: () => setFeaturedPending(null),
+      onError: (e: any) => Alert.alert('Error', e.message ?? 'Failed to set featured shop.'),
     });
   };
 

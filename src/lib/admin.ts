@@ -64,7 +64,7 @@ export async function setShopFeatured(shopId: string): Promise<void> {
   const { error: clearError } = await supabase
     .from('shops')
     .update({ is_featured: false })
-    .neq('id', '');
+    .eq('is_featured', true);
 
   if (clearError) throw clearError;
 
