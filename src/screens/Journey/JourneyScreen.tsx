@@ -65,7 +65,7 @@ export default function JourneyScreen({ navigation }: Props) {
   const previewBadges = userBadges.slice(0, BADGE_PREVIEW_LIMIT);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
 
         {/* ── Profile header ─────────────────────────────── */}
@@ -168,6 +168,14 @@ export default function JourneyScreen({ navigation }: Props) {
           )}
         </View>
 
+        {/* ── Help ───────────────────────────────────────── */}
+        <TouchableOpacity
+          style={styles.faqButton}
+          onPress={() => navigation.navigate('FAQ')}
+        >
+          <Text style={styles.faqText}>Help & FAQ</Text>
+        </TouchableOpacity>
+
         {/* ── Sign Out ───────────────────────────────────── */}
         <TouchableOpacity style={styles.signOutButton} onPress={signOut}>
           <Text style={styles.signOutText}>Sign Out</Text>
@@ -240,6 +248,18 @@ const styles = StyleSheet.create({
   emptyBody: { fontSize: 13, color: '#888', textAlign: 'center', lineHeight: 18 },
 
   settingsIconButton: { marginLeft: 10, padding: 4 },
+
+  faqButton: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  faqText: { fontSize: 15, color: '#2D5016', fontWeight: '600' },
 
   signOutButton: {
     marginHorizontal: 16,
