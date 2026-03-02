@@ -98,6 +98,8 @@ export default function AdminShopsScreen({ navigation }: Props) {
 
 
 
+  const featured = shops?.find((s) => s.is_featured);
+
   return (
     <FlatList
       data={shops}
@@ -107,8 +109,15 @@ export default function AdminShopsScreen({ navigation }: Props) {
       contentContainerStyle={styles.content}
       ListHeaderComponent={
         <View style={styles.header}>
+          <Text style={styles.sectionLabel}>Shop of the Week</Text>
+          <View style={styles.featuredCard}>
+            <Ionicons name="star" size={18} color="#f5a623" style={{ marginRight: 8 }} />
+            <Text style={styles.featuredName} numberOfLines={1}>
+              {featured ? featured.name : 'None selected'}
+            </Text>
+          </View>
           <Text style={styles.headerNote}>
-            <Text style={{ color: '#f5a623' }}>★</Text> = Featured on Home tab
+            Tap <Text style={{ color: '#f5a623' }}>★</Text> on any shop below to set it as Shop of the Week.
           </Text>
         </View>
       }
@@ -130,12 +139,42 @@ const styles = StyleSheet.create({
 
   header: {
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingTop: 16,
+    paddingBottom: 12,
     backgroundColor: '#f0ede8',
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#888',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 8,
+  },
+  featuredCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  featuredName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    flex: 1,
   },
   headerNote: {
     fontSize: 13,
-    color: '#666',
+    color: '#888',
+    marginBottom: 4,
   },
 
   row: {

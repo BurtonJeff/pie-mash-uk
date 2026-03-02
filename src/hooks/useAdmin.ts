@@ -51,6 +51,8 @@ export function useSetShopFeatured() {
     mutationFn: (shopId: string) => setShopFeatured(shopId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['adminShops'] });
+      qc.invalidateQueries({ queryKey: ['featuredShop'] });
+      qc.invalidateQueries({ queryKey: ['shops'] });
     },
   });
 }
