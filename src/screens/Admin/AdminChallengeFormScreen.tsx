@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -11,15 +11,20 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AdminStackParamList } from '../../navigation/AdminNavigator';
-import { useAddChallenge } from '../../hooks/useAdmin';
+import { useAddChallenge, useUpdateChallenge, useAdminChallengeById } from '../../hooks/useAdmin';
 import { ChallengeFormData } from '../../lib/admin';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'AdminChallengeForm'>;
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
-export default function AdminChallengeFormScreen({ navigation }: Props) {
+export default function AdminChallengeFormScreen({ navigation, route }: Props) {
+  const challengeId = route.params?.challengeId;
+  const isEditing = !!challengeId;
+
   const addChallenge = useAddChallenge();
+  const updateChallenge = useUpdateChallenge();
+  const { data: existingChallenge, isLoading: challengeLoading } = useAdminChallengeById(challengeId);
 
   const [form, setForm] = useState<ChallengeFormData>({
     title: '',
@@ -28,6 +33,22 @@ export default function AdminChallengeFormScreen({ navigation }: Props) {
     start_date: '',
     end_date: '',
   });
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ title: isEditing ? 'Edit Challenge' : 'New Challenge' });
+  }, [navigation, isEditing]);
+
+  useEffect(() => {
+    if (existingChallenge) {
+      setForm({
+        title: existingChallenge.title,
+        description: existingChallenge.description,
+        points_reward: existingChallenge.pointsReward.toString(),
+        start_date: existingChallenge.startDate,
+        end_date: existingChallenge.endDate,
+      });
+    }
+  }, [existingChallenge]);
 
   const set = (key: keyof ChallengeFormData, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -52,17 +73,36 @@ export default function AdminChallengeFormScreen({ navigation }: Props) {
       return;
     }
 
-    addChallenge.mutate(form, {
-      onSuccess: () => {
-        Alert.alert('Success', `Challenge "${form.title}" has been created.`, [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
-      },
-      onError: (e: any) => {
-        Alert.alert('Error', e.message ?? 'Could not create challenge. Please try again.');
-      },
-    });
+    if (isEditing) {
+      updateChallenge.mutate({ challengeId, data: form }, {
+        onSuccess: () => {
+          Alert.alert('Success', `Challenge "${form.title}" has been updated.`, [
+            { text: 'OK', onPress: () => navigation.goBack() },
+          ]);
+        },
+        onError: (e: any) => {
+          Alert.alert('Error', e.message ?? 'Could not update challenge. Please try again.');
+        },
+      });
+    } else {
+      addChallenge.mutate(form, {
+        onSuccess: () => {
+          Alert.alert('Success', `Challenge "${form.title}" has been created.`, [
+            { text: 'OK', onPress: () => navigation.goBack() },
+          ]);
+        },
+        onError: (e: any) => {
+          Alert.alert('Error', e.message ?? 'Could not create challenge. Please try again.');
+        },
+      });
+    }
   };
+
+  const isPending = addChallenge.isPending || updateChallenge.isPending;
+
+  if (isEditing && challengeLoading) {
+    return <ActivityIndicator size="large" color="#2D5016" style={styles.loader} />;
+  }
 
   return (
     <ScrollView
@@ -130,14 +170,16 @@ export default function AdminChallengeFormScreen({ navigation }: Props) {
       </View>
 
       <TouchableOpacity
-        style={[styles.submitButton, addChallenge.isPending && styles.submitButtonDisabled]}
+        style={[styles.submitButton, isPending && styles.submitButtonDisabled]}
         onPress={handleSubmit}
-        disabled={addChallenge.isPending}
+        disabled={isPending}
       >
-        {addChallenge.isPending ? (
+        {isPending ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.submitButtonText}>Create Challenge</Text>
+          <Text style={styles.submitButtonText}>
+            {isEditing ? 'Save Changes' : 'Create Challenge'}
+          </Text>
         )}
       </TouchableOpacity>
     </ScrollView>
@@ -156,6 +198,7 @@ function FieldLabel({ label, required }: { label: string; required?: boolean }) 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0ede8' },
   content: { paddingHorizontal: 20, paddingBottom: 48, paddingTop: 16 },
+  loader: { flex: 1, marginTop: 80 },
 
   label: {
     fontSize: 13,

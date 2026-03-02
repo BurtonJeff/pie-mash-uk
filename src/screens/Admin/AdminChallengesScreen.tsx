@@ -22,7 +22,7 @@ export default function AdminChallengesScreen({ navigation }: Props) {
     navigation.setOptions({
       headerRight: () => (
         <TouchableOpacity
-          onPress={() => navigation.navigate('AdminChallengeForm')}
+          onPress={() => navigation.navigate('AdminChallengeForm', {})}
           style={{ marginRight: 4 }}
         >
           <Ionicons name="add" size={26} color="#2D5016" />
@@ -32,7 +32,10 @@ export default function AdminChallengesScreen({ navigation }: Props) {
   }, [navigation]);
 
   const renderItem = ({ item }: { item: AdminChallenge }) => (
-    <View style={styles.card}>
+    <TouchableOpacity
+      style={styles.card}
+      onPress={() => navigation.navigate('AdminChallengeForm', { challengeId: item.id })}
+    >
       <View style={styles.cardTop}>
         <View style={styles.scopeBadge}>
           <Text style={styles.scopeText}>
@@ -54,7 +57,7 @@ export default function AdminChallengesScreen({ navigation }: Props) {
       <Text style={styles.dates}>
         {formatDate(item.startDate)} → {formatDate(item.endDate)}
       </Text>
-    </View>
+    </TouchableOpacity>
   );
 
   return (

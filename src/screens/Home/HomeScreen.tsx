@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator,
+  ActivityIndicator, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -27,13 +27,21 @@ export default function HomeScreen({ navigation }: Props) {
   const recentFeed = feed.slice(0, 3);
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
         {/* Subtitle */}
         <Text style={styles.subtitle}>Preserving a Great British Tradition, One Visit at a Time</Text>
+
+        {/* Book link */}
+        <TouchableOpacity
+          onPress={() => Linking.openURL('https://www.amazon.co.uk/Normans-Conquest-invasion-Englands-traditional/dp/B0G6VF3NRL')}
+          style={styles.bookLink}
+        >
+          <Text style={styles.bookLinkText}>Learn more from <Text style={styles.bookLinkBold}>Norman's Conquest</Text></Text>
+        </TouchableOpacity>
 
         {/* Stats row */}
         {profile && (
@@ -91,7 +99,11 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f8f5f0' },
   content: { padding: 20, paddingBottom: 40 },
 
-  subtitle: { fontSize: 15, color: '#888', fontStyle: 'italic', marginBottom: 20 },
+  subtitle: { fontSize: 15, color: '#888', fontStyle: 'italic', marginBottom: 10 },
+
+  bookLink: { marginBottom: 20 },
+  bookLinkText: { fontSize: 13, color: '#2D5016' },
+  bookLinkBold: { fontWeight: '700' },
 
   statsRow: {
     flexDirection: 'row',

@@ -28,7 +28,7 @@ export default function AdminShopsScreen({ navigation }: Props) {
     navigation.setOptions({
       headerRight: () => (
         <TouchableOpacity
-          onPress={() => navigation.navigate('AdminShopForm')}
+          onPress={() => navigation.navigate('AdminShopForm', {})}
           style={{ marginRight: 4 }}
         >
           <Ionicons name="add" size={26} color="#2D5016" />
@@ -57,12 +57,15 @@ export default function AdminShopsScreen({ navigation }: Props) {
 
     return (
       <View style={styles.row}>
-        <View style={styles.rowInfo}>
+        <TouchableOpacity
+          style={styles.rowInfo}
+          onPress={() => navigation.navigate('AdminShopForm', { shopId: item.id })}
+        >
           <Text style={styles.shopName} numberOfLines={1}>
             {item.name}
           </Text>
           <Text style={styles.shopCity}>{item.city}</Text>
-        </View>
+        </TouchableOpacity>
 
         {isMutating ? (
           <ActivityIndicator size="small" color="#2D5016" style={styles.loader} />
@@ -92,6 +95,8 @@ export default function AdminShopsScreen({ navigation }: Props) {
       </View>
     );
   };
+
+
 
   return (
     <FlatList

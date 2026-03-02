@@ -11,11 +11,11 @@ import AdminChallengeFormScreen from '../screens/Admin/AdminChallengeFormScreen'
 export type AdminStackParamList = {
   AdminHome: undefined;
   AdminShops: undefined;
-  AdminShopForm: undefined;
+  AdminShopForm: { shopId?: string };
   AdminBadges: undefined;
-  AdminBadgeForm: undefined;
+  AdminBadgeForm: { badgeId?: string };
   AdminChallenges: undefined;
-  AdminChallengeForm: undefined;
+  AdminChallengeForm: { challengeId?: string };
 };
 
 const Stack = createNativeStackNavigator<AdminStackParamList>();
@@ -36,7 +36,6 @@ export default function AdminNavigator() {
       <Stack.Screen
         name="AdminShopForm"
         component={AdminShopFormScreen}
-        options={{ title: 'Add Shop' }}
       />
       <Stack.Screen
         name="AdminBadges"
@@ -46,7 +45,6 @@ export default function AdminNavigator() {
       <Stack.Screen
         name="AdminBadgeForm"
         component={AdminBadgeFormScreen}
-        options={{ title: 'Add Badge' }}
       />
       <Stack.Screen
         name="AdminChallenges"
@@ -56,7 +54,6 @@ export default function AdminNavigator() {
       <Stack.Screen
         name="AdminChallengeForm"
         component={AdminChallengeFormScreen}
-        options={{ title: 'New Challenge' }}
       />
     </Stack.Navigator>
   );

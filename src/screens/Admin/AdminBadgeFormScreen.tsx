@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -11,15 +11,25 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AdminStackParamList } from '../../navigation/AdminNavigator';
-import { useAddBadge } from '../../hooks/useAdmin';
+import { useAddBadge, useUpdateBadge, useAdminBadgeById } from '../../hooks/useAdmin';
 import { BadgeFormData } from '../../lib/admin';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'AdminBadgeForm'>;
 
 type CriteriaType = 'total_checkins' | 'unique_shops';
 
-export default function AdminBadgeFormScreen({ navigation }: Props) {
+const CRITERIA_OPTIONS: { type: CriteriaType; label: string }[] = [
+  { type: 'total_checkins', label: 'Total Check-ins' },
+  { type: 'unique_shops', label: 'Unique Shops' },
+];
+
+export default function AdminBadgeFormScreen({ navigation, route }: Props) {
+  const badgeId = route.params?.badgeId;
+  const isEditing = !!badgeId;
+
   const addBadge = useAddBadge();
+  const updateBadge = useUpdateBadge();
+  const { data: existingBadge, isLoading: badgeLoading } = useAdminBadgeById(badgeId);
 
   const [form, setForm] = useState<BadgeFormData>({
     name: '',
@@ -29,6 +39,23 @@ export default function AdminBadgeFormScreen({ navigation }: Props) {
     criteria_type: 'total_checkins',
     criteria_value: '',
   });
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ title: isEditing ? 'Edit Badge' : 'Add Badge' });
+  }, [navigation, isEditing]);
+
+  useEffect(() => {
+    if (existingBadge) {
+      setForm({
+        name: existingBadge.name,
+        description: existingBadge.description,
+        icon_url: existingBadge.icon_url,
+        category: existingBadge.category,
+        criteria_type: existingBadge.criteria_type as CriteriaType,
+        criteria_value: existingBadge.criteria_value.toString(),
+      });
+    }
+  }, [existingBadge]);
 
   const set = (key: keyof BadgeFormData, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -50,22 +77,36 @@ export default function AdminBadgeFormScreen({ navigation }: Props) {
       return;
     }
 
-    addBadge.mutate(form, {
-      onSuccess: () => {
-        Alert.alert('Success', `Badge "${form.name}" has been added.`, [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
-      },
-      onError: (e: any) => {
-        Alert.alert('Error', e.message ?? 'Could not add badge. Please try again.');
-      },
-    });
+    if (isEditing) {
+      updateBadge.mutate({ badgeId, data: form }, {
+        onSuccess: () => {
+          Alert.alert('Success', `Badge "${form.name}" has been updated.`, [
+            { text: 'OK', onPress: () => navigation.goBack() },
+          ]);
+        },
+        onError: (e: any) => {
+          Alert.alert('Error', e.message ?? 'Could not update badge. Please try again.');
+        },
+      });
+    } else {
+      addBadge.mutate(form, {
+        onSuccess: () => {
+          Alert.alert('Success', `Badge "${form.name}" has been added.`, [
+            { text: 'OK', onPress: () => navigation.goBack() },
+          ]);
+        },
+        onError: (e: any) => {
+          Alert.alert('Error', e.message ?? 'Could not add badge. Please try again.');
+        },
+      });
+    }
   };
 
-  const CRITERIA_OPTIONS: { type: CriteriaType; label: string }[] = [
-    { type: 'total_checkins', label: 'Total Check-ins' },
-    { type: 'unique_shops', label: 'Unique Shops' },
-  ];
+  const isPending = addBadge.isPending || updateBadge.isPending;
+
+  if (isEditing && badgeLoading) {
+    return <ActivityIndicator size="large" color="#2D5016" style={styles.loader} />;
+  }
 
   return (
     <ScrollView
@@ -142,14 +183,16 @@ export default function AdminBadgeFormScreen({ navigation }: Props) {
       />
 
       <TouchableOpacity
-        style={[styles.submitButton, addBadge.isPending && styles.submitButtonDisabled]}
+        style={[styles.submitButton, isPending && styles.submitButtonDisabled]}
         onPress={handleSubmit}
-        disabled={addBadge.isPending}
+        disabled={isPending}
       >
-        {addBadge.isPending ? (
+        {isPending ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.submitButtonText}>Add Badge</Text>
+          <Text style={styles.submitButtonText}>
+            {isEditing ? 'Save Changes' : 'Add Badge'}
+          </Text>
         )}
       </TouchableOpacity>
     </ScrollView>
@@ -168,6 +211,7 @@ function FieldLabel({ label, required }: { label: string; required?: boolean }) 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0ede8' },
   content: { paddingHorizontal: 20, paddingBottom: 48, paddingTop: 16 },
+  loader: { flex: 1, marginTop: 80 },
 
   label: {
     fontSize: 13,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -12,13 +12,18 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AdminStackParamList } from '../../navigation/AdminNavigator';
-import { useAddShop } from '../../hooks/useAdmin';
+import { useAddShop, useUpdateShop, useAdminShopById } from '../../hooks/useAdmin';
 import { ShopFormData } from '../../lib/admin';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'AdminShopForm'>;
 
-export default function AdminShopFormScreen({ navigation }: Props) {
+export default function AdminShopFormScreen({ navigation, route }: Props) {
+  const shopId = route.params?.shopId;
+  const isEditing = !!shopId;
+
   const addShop = useAddShop();
+  const updateShop = useUpdateShop();
+  const { data: existingShop, isLoading: shopLoading } = useAdminShopById(shopId);
 
   const [form, setForm] = useState<ShopFormData>({
     name: '',
@@ -34,6 +39,33 @@ export default function AdminShopFormScreen({ navigation }: Props) {
     price_range: 1,
     features: { is_takeaway: false, has_seating: false, has_parking: false },
   });
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ title: isEditing ? 'Edit Shop' : 'Add Shop' });
+  }, [navigation, isEditing]);
+
+  useEffect(() => {
+    if (existingShop) {
+      setForm({
+        name: existingShop.name,
+        description: existingShop.description || '',
+        address_line1: existingShop.address_line1,
+        address_line2: existingShop.address_line2 || '',
+        city: existingShop.city,
+        postcode: existingShop.postcode,
+        phone: existingShop.phone || '',
+        website: existingShop.website || '',
+        latitude: existingShop.latitude.toString(),
+        longitude: existingShop.longitude.toString(),
+        price_range: existingShop.price_range,
+        features: {
+          is_takeaway: !!(existingShop.features as any)?.is_takeaway,
+          has_seating: !!(existingShop.features as any)?.has_seating,
+          has_parking: !!(existingShop.features as any)?.has_parking,
+        },
+      });
+    }
+  }, [existingShop]);
 
   const set = (key: keyof ShopFormData, value: any) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -63,17 +95,36 @@ export default function AdminShopFormScreen({ navigation }: Props) {
       return;
     }
 
-    addShop.mutate(form, {
-      onSuccess: () => {
-        Alert.alert('Success', `"${form.name}" has been added.`, [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
-      },
-      onError: (e: any) => {
-        Alert.alert('Error', e.message ?? 'Could not add shop. Please try again.');
-      },
-    });
+    if (isEditing) {
+      updateShop.mutate({ shopId, data: form }, {
+        onSuccess: () => {
+          Alert.alert('Success', `"${form.name}" has been updated.`, [
+            { text: 'OK', onPress: () => navigation.goBack() },
+          ]);
+        },
+        onError: (e: any) => {
+          Alert.alert('Error', e.message ?? 'Could not update shop. Please try again.');
+        },
+      });
+    } else {
+      addShop.mutate(form, {
+        onSuccess: () => {
+          Alert.alert('Success', `"${form.name}" has been added.`, [
+            { text: 'OK', onPress: () => navigation.goBack() },
+          ]);
+        },
+        onError: (e: any) => {
+          Alert.alert('Error', e.message ?? 'Could not add shop. Please try again.');
+        },
+      });
+    }
   };
+
+  const isPending = addShop.isPending || updateShop.isPending;
+
+  if (isEditing && shopLoading) {
+    return <ActivityIndicator size="large" color="#2D5016" style={styles.loader} />;
+  }
 
   return (
     <ScrollView
@@ -202,14 +253,16 @@ export default function AdminShopFormScreen({ navigation }: Props) {
       </View>
 
       <TouchableOpacity
-        style={[styles.submitButton, addShop.isPending && styles.submitButtonDisabled]}
+        style={[styles.submitButton, isPending && styles.submitButtonDisabled]}
         onPress={handleSubmit}
-        disabled={addShop.isPending}
+        disabled={isPending}
       >
-        {addShop.isPending ? (
+        {isPending ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.submitButtonText}>Add Shop</Text>
+          <Text style={styles.submitButtonText}>
+            {isEditing ? 'Save Changes' : 'Add Shop'}
+          </Text>
         )}
       </TouchableOpacity>
     </ScrollView>
@@ -250,6 +303,7 @@ function SwitchRow({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0ede8' },
   content: { paddingHorizontal: 20, paddingBottom: 48, paddingTop: 16 },
+  loader: { flex: 1, marginTop: 80 },
 
   label: {
     fontSize: 13,

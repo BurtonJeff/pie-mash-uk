@@ -25,7 +25,7 @@ export default function AdminBadgesScreen({ navigation }: Props) {
     navigation.setOptions({
       headerRight: () => (
         <TouchableOpacity
-          onPress={() => navigation.navigate('AdminBadgeForm')}
+          onPress={() => navigation.navigate('AdminBadgeForm', {})}
           style={{ marginRight: 4 }}
         >
           <Ionicons name="add" size={26} color="#2D5016" />
@@ -47,7 +47,10 @@ export default function AdminBadgesScreen({ navigation }: Props) {
     return (
       <View style={styles.card}>
         <View style={styles.cardTop}>
-          <View style={styles.cardLeft}>
+          <TouchableOpacity
+            style={styles.cardLeft}
+            onPress={() => navigation.navigate('AdminBadgeForm', { badgeId: item.id })}
+          >
             <Text style={styles.iconText} numberOfLines={1}>
               {item.icon_url}
             </Text>
@@ -59,7 +62,7 @@ export default function AdminBadgesScreen({ navigation }: Props) {
                 <Text style={styles.categoryText}>{item.category}</Text>
               </View>
             </View>
-          </View>
+          </TouchableOpacity>
           {isMutating ? (
             <ActivityIndicator size="small" color="#2D5016" />
           ) : (

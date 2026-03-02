@@ -99,6 +99,24 @@ export interface ShopFormData {
   features: { is_takeaway: boolean; has_seating: boolean; has_parking: boolean };
 }
 
+export async function fetchAdminShopById(shopId: string): Promise<AdminShop> {
+  const { data, error } = await supabase
+    .from('shops')
+    .select('*, shop_photos(storage_path, is_primary)')
+    .eq('id', shopId)
+    .single();
+
+  if (error) throw error;
+
+  return {
+    ...data,
+    primary_photo:
+      data.shop_photos?.find((p: any) => p.is_primary)?.storage_path ??
+      data.shop_photos?.[0]?.storage_path ??
+      null,
+  };
+}
+
 export async function addShop(data: ShopFormData): Promise<void> {
   const slug = data.name
     .toLowerCase()
@@ -123,6 +141,28 @@ export async function addShop(data: ShopFormData): Promise<void> {
     is_active: true,
     is_featured: false,
   });
+
+  if (error) throw error;
+}
+
+export async function updateShop(shopId: string, data: ShopFormData): Promise<void> {
+  const { error } = await supabase
+    .from('shops')
+    .update({
+      name: data.name,
+      description: data.description,
+      address_line1: data.address_line1,
+      address_line2: data.address_line2 || null,
+      city: data.city,
+      postcode: data.postcode,
+      phone: data.phone || null,
+      website: data.website || null,
+      latitude: parseFloat(data.latitude),
+      longitude: parseFloat(data.longitude),
+      price_range: data.price_range,
+      features: data.features,
+    })
+    .eq('id', shopId);
 
   if (error) throw error;
 }
@@ -157,6 +197,17 @@ export interface BadgeFormData {
   criteria_value: string;
 }
 
+export async function fetchAdminBadgeById(badgeId: string): Promise<Badge> {
+  const { data, error } = await supabase
+    .from('badges')
+    .select('*')
+    .eq('id', badgeId)
+    .single();
+
+  if (error) throw error;
+  return data as Badge;
+}
+
 export async function addBadge(data: BadgeFormData): Promise<void> {
   const slug = data.name
     .toLowerCase()
@@ -173,6 +224,22 @@ export async function addBadge(data: BadgeFormData): Promise<void> {
     criteria_value: parseInt(data.criteria_value, 10),
     is_active: true,
   });
+
+  if (error) throw error;
+}
+
+export async function updateBadge(badgeId: string, data: BadgeFormData): Promise<void> {
+  const { error } = await supabase
+    .from('badges')
+    .update({
+      name: data.name,
+      description: data.description,
+      icon_url: data.icon_url,
+      category: data.category,
+      criteria_type: data.criteria_type,
+      criteria_value: parseInt(data.criteria_value, 10),
+    })
+    .eq('id', badgeId);
 
   if (error) throw error;
 }
@@ -216,6 +283,42 @@ export interface ChallengeFormData {
   points_reward: string;
   start_date: string;
   end_date: string;
+}
+
+export async function fetchAdminChallengeById(challengeId: string): Promise<AdminChallenge> {
+  const { data, error } = await supabase
+    .from('challenges')
+    .select('*')
+    .eq('id', challengeId)
+    .single();
+
+  if (error) throw error;
+
+  return {
+    id: data.id,
+    title: data.title,
+    description: data.description,
+    pointsReward: data.points_reward,
+    startDate: data.start_date,
+    endDate: data.end_date,
+    scope: data.scope,
+    isActive: data.is_active,
+  };
+}
+
+export async function updateChallenge(challengeId: string, data: ChallengeFormData): Promise<void> {
+  const { error } = await supabase
+    .from('challenges')
+    .update({
+      title: data.title,
+      description: data.description,
+      points_reward: parseInt(data.points_reward, 10),
+      start_date: data.start_date,
+      end_date: data.end_date,
+    })
+    .eq('id', challengeId);
+
+  if (error) throw error;
 }
 
 export async function addChallenge(data: ChallengeFormData): Promise<void> {
