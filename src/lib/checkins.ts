@@ -52,6 +52,19 @@ async function fetchBadgesByIds(ids: string[]): Promise<Badge[]> {
 export async function submitCheckIn(params: SubmitCheckInParams): Promise<CheckInResult> {
   const { userId, shopId, latitude, longitude, photoUri, notes } = params;
 
+  // Reject if the user has already checked in here today
+  const dayStart = new Date();
+  dayStart.setUTCHours(0, 0, 0, 0);
+  const { count: todayCount } = await supabase
+    .from('checkins')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('shop_id', shopId)
+    .gte('checked_in_at', dayStart.toISOString());
+  if ((todayCount ?? 0) > 0) {
+    throw new Error("You've already checked in here today. Come back tomorrow!");
+  }
+
   // Snapshot badges before check-in so we can diff afterwards
   const beforeBadges = await getEarnedBadgeIds(userId);
 
