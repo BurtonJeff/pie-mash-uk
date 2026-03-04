@@ -89,9 +89,6 @@ export default function DiscoverScreen({ navigation }: Props) {
           clearButtonMode="while-editing"
           returnKeyType="search"
         />
-        <TouchableOpacity style={styles.locationButton} onPress={requestLocation}>
-          <Text style={styles.locationButtonText}>Near me</Text>
-        </TouchableOpacity>
       </View>
 
       {/* View mode toggle */}
@@ -157,9 +154,8 @@ export default function DiscoverScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8f5f0' },
-  searchRow: { flexDirection: 'row', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, gap: 8 },
+  searchRow: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
   searchInput: {
-    flex: 1,
     backgroundColor: '#fff',
     borderRadius: 10,
     paddingHorizontal: 14,
@@ -168,13 +164,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e0e0',
   },
-  locationButton: {
-    backgroundColor: '#2D5016',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    justifyContent: 'center',
-  },
-  locationButtonText: { color: '#fff', fontWeight: '600', fontSize: 13 },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',

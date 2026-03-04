@@ -23,6 +23,7 @@ import {
   uploadShopPhoto,
   deleteShopPhoto,
   setShopPhotoPrimary,
+  fetchAdminFeedback,
 } from '../lib/admin';
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
@@ -240,6 +241,14 @@ export function useDeleteShopPhoto() {
       qc.invalidateQueries({ queryKey: ['shops'] });
       qc.invalidateQueries({ queryKey: ['shop', shopId] });
     },
+  });
+}
+
+export function useAdminFeedback() {
+  return useQuery({
+    queryKey: ['adminFeedback'],
+    queryFn: () => fetchAdminFeedback(),
+    staleTime: 0,
   });
 }
 

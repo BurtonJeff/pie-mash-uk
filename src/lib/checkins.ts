@@ -9,7 +9,10 @@ export interface SubmitCheckInParams {
   longitude: number;
   photoUri?: string | null;
   notes?: string;
+  isFeatured?: boolean;
 }
+
+const FEATURED_BONUS_POINTS = 10;
 
 export interface CheckInResult {
   checkin: CheckIn;
@@ -50,7 +53,7 @@ async function fetchBadgesByIds(ids: string[]): Promise<Badge[]> {
 }
 
 export async function submitCheckIn(params: SubmitCheckInParams): Promise<CheckInResult> {
-  const { userId, shopId, latitude, longitude, photoUri, notes } = params;
+  const { userId, shopId, latitude, longitude, photoUri, notes, isFeatured } = params;
 
   // Reject if the user has already checked in here today
   const dayStart = new Date();
@@ -103,7 +106,7 @@ export async function submitCheckIn(params: SubmitCheckInParams): Promise<CheckI
       .eq('user_id', userId)
       .eq('shop_id', shopId);
     const isFirstVisit = (shopCount ?? 1) === 1;
-    pointsEarned = 10 + (isFirstVisit ? 25 : 0);
+    pointsEarned = 10 + (isFirstVisit ? 25 : 0) + (isFeatured ? FEATURED_BONUS_POINTS : 0);
 
     // Update profile totals directly (users have UPDATE permission on own profile).
     const { data: profile } = await supabase
@@ -126,13 +129,27 @@ export async function submitCheckIn(params: SubmitCheckInParams): Promise<CheckI
       // Award badges client-side (fallback when badge trigger not yet applied).
       const { data: activeBadges } = await supabase
         .from('badges')
-        .select('id, criteria_type, criteria_value')
+        .select('id, criteria_type, criteria_value, criteria_shops')
         .eq('is_active', true);
+
+      // Fetch visited shop IDs once if any shop_tour badges exist
+      const hasTourBadge = (activeBadges ?? []).some((b: any) => b.criteria_type === 'shop_tour');
+      let visitedShopIds: Set<string> = new Set();
+      if (hasTourBadge) {
+        const { data: visits } = await supabase
+          .from('checkins')
+          .select('shop_id')
+          .eq('user_id', userId);
+        visitedShopIds = new Set((visits ?? []).map((v: any) => v.shop_id));
+      }
 
       const toAward = (activeBadges ?? []).filter((b: any) => {
         if (beforeBadges.has(b.id)) return false;
         if (b.criteria_type === 'total_checkins') return newVisits >= b.criteria_value;
         if (b.criteria_type === 'unique_shops') return newUniqueShops >= b.criteria_value;
+        if (b.criteria_type === 'shop_tour' && Array.isArray(b.criteria_shops) && b.criteria_shops.length > 0) {
+          return b.criteria_shops.every((id: string) => visitedShopIds.has(id));
+        }
         return false;
       });
 
@@ -141,6 +158,24 @@ export async function submitCheckIn(params: SubmitCheckInParams): Promise<CheckI
           toAward.map((b: any) => ({ user_id: userId, badge_id: b.id }))
         );
       }
+    }
+  } else if (isFeatured) {
+    // DB trigger ran but we still need to apply the featured bonus on top
+    pointsEarned += FEATURED_BONUS_POINTS;
+    await supabase
+      .from('checkins')
+      .update({ points_earned: pointsEarned })
+      .eq('id', checkin.id);
+    const { data: profileForBonus } = await supabase
+      .from('profiles')
+      .select('total_points')
+      .eq('id', userId)
+      .single();
+    if (profileForBonus) {
+      await supabase
+        .from('profiles')
+        .update({ total_points: profileForBonus.total_points + FEATURED_BONUS_POINTS })
+        .eq('id', userId);
     }
   }
 
@@ -154,6 +189,34 @@ export async function submitCheckIn(params: SubmitCheckInParams): Promise<CheckI
     pointsEarned,
     newBadges,
   };
+}
+
+export interface UpdateCheckInParams {
+  checkInId: string;
+  userId: string;
+  /** Local file URI of a new photo to upload, if the user picked one. */
+  newPhotoUri?: string;
+  /** The desired final photo_url — the existing URL to keep, or null to clear. */
+  photoUrl: string | null;
+  notes: string;
+}
+
+export async function updateCheckIn(params: UpdateCheckInParams): Promise<void> {
+  const { checkInId, userId, newPhotoUri, notes } = params;
+  let photoUrl = params.photoUrl;
+
+  if (newPhotoUri) {
+    const path = await uploadCheckinPhoto(userId, newPhotoUri);
+    const { data } = supabase.storage.from('checkin-photos').getPublicUrl(path);
+    photoUrl = data.publicUrl;
+  }
+
+  const { error } = await supabase
+    .from('checkins')
+    .update({ photo_url: photoUrl, notes: notes.trim() || null })
+    .eq('id', checkInId);
+
+  if (error) throw error;
 }
 
 export async function fetchUserCheckins(userId: string): Promise<(CheckIn & { shop_name: string })[]> {

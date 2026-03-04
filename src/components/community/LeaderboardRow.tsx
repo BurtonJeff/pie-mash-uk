@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { LeaderboardEntry } from '../../lib/leaderboard';
 
 interface Props {
   entry: LeaderboardEntry;
   isCurrentUser: boolean;
+  onPress?: () => void;
 }
 
 const MEDAL: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
@@ -19,9 +20,14 @@ function Avatar({ name, url }: { name: string; url: string | null }) {
   );
 }
 
-export default function LeaderboardRow({ entry, isCurrentUser }: Props) {
+export default function LeaderboardRow({ entry, isCurrentUser, onPress }: Props) {
   return (
-    <View style={[styles.row, isCurrentUser && styles.rowHighlight]}>
+    <TouchableOpacity
+      style={[styles.row, isCurrentUser && styles.rowHighlight]}
+      onPress={onPress}
+      activeOpacity={onPress ? 0.7 : 1}
+      disabled={!onPress}
+    >
       <Text style={styles.rank}>{MEDAL[entry.rank] ?? entry.rank}</Text>
       <Avatar name={entry.displayName || entry.username} url={entry.avatarUrl} />
       <View style={styles.nameBlock}>
@@ -32,7 +38,7 @@ export default function LeaderboardRow({ entry, isCurrentUser }: Props) {
         <Text style={styles.meta}>{entry.uniqueShops} shops visited</Text>
       </View>
       <Text style={styles.points}>{entry.points.toLocaleString()} pts</Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 

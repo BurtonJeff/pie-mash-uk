@@ -17,6 +17,8 @@ const DAY_NAMES: (keyof OpeningHours)[] = [
 ];
 
 export function isOpenNow(hours: OpeningHours): boolean {
+  // If no hours data is configured for this shop, assume it is open
+  if (!hours || Object.keys(hours).length === 0) return true;
   const now = new Date();
   const day = DAY_NAMES[now.getDay()];
   const dayHours = hours[day];

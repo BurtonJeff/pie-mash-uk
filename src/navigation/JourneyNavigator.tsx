@@ -6,6 +6,8 @@ import AllVisitsScreen from '../screens/Journey/AllVisitsScreen';
 import EditProfileScreen from '../screens/Journey/EditProfileScreen';
 import SettingsScreen from '../screens/Journey/SettingsScreen';
 import FAQScreen from '../screens/Journey/FAQScreen';
+import LegalScreen from '../screens/Journey/LegalScreen';
+import EditCheckInScreen from '../screens/Journey/EditCheckInScreen';
 import AdminNavigator from './AdminNavigator';
 
 export type JourneyStackParamList = {
@@ -15,6 +17,13 @@ export type JourneyStackParamList = {
   EditProfile: undefined;
   Settings: undefined;
   FAQ: undefined;
+  LegalContent: { type: 'privacy_policy' | 'terms_of_service' };
+  EditCheckIn: {
+    checkInId: string;
+    shopName: string;
+    initialPhotoUrl: string | null;
+    initialNotes: string | null;
+  };
   Admin: undefined;
 };
 
@@ -23,12 +32,20 @@ const Stack = createNativeStackNavigator<JourneyStackParamList>();
 export default function JourneyNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerTitleStyle: { fontSize: 22 } }}>
-      <Stack.Screen name="JourneyHome" component={JourneyScreen} options={{ title: 'My Journey' }} />
+      <Stack.Screen name="JourneyHome" component={JourneyScreen} options={{ title: 'Profile' }} />
       <Stack.Screen name="AllBadges" component={AllBadgesScreen} options={{ title: 'Badge Collection' }} />
       <Stack.Screen name="AllVisits" component={AllVisitsScreen} options={{ title: 'Visit History' }} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit Profile' }} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
       <Stack.Screen name="FAQ" component={FAQScreen} options={{ title: 'FAQ' }} />
+      <Stack.Screen name="EditCheckIn" component={EditCheckInScreen} options={{ title: 'Edit Check-in' }} />
+      <Stack.Screen
+        name="LegalContent"
+        component={LegalScreen}
+        options={({ route }) => ({
+          title: route.params.type === 'privacy_policy' ? 'Privacy Policy' : 'Terms of Service',
+        })}
+      />
       <Stack.Group screenOptions={{ presentation: 'modal', headerShown: false }}>
         <Stack.Screen name="Admin" component={AdminNavigator} />
       </Stack.Group>

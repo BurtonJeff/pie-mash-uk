@@ -29,6 +29,17 @@ Deno.serve(async (req) => {
 
   const toAward: string[] = [];
 
+  // For shop_tour badges, fetch this user's distinct visited shop IDs once
+  const hasTourBadges = (unearned ?? []).some((b) => b.criteria_type === 'shop_tour');
+  let visitedShopIds: Set<string> = new Set();
+  if (hasTourBadges) {
+    const { data: visits } = await supabase
+      .from('checkins')
+      .select('shop_id')
+      .eq('user_id', user_id);
+    visitedShopIds = new Set((visits ?? []).map((v: any) => v.shop_id));
+  }
+
   for (const badge of unearned ?? []) {
     if (badge.criteria_type === 'total_checkins' && profile.total_visits >= badge.criteria_value) {
       toAward.push(badge.id);
@@ -36,7 +47,14 @@ Deno.serve(async (req) => {
     if (badge.criteria_type === 'unique_shops' && profile.unique_shops_visited >= badge.criteria_value) {
       toAward.push(badge.id);
     }
-    // Additional criteria types (same_shop, region, seasonal, etc.) to be implemented per badge category
+    if (
+      badge.criteria_type === 'shop_tour' &&
+      Array.isArray(badge.criteria_shops) &&
+      badge.criteria_shops.length > 0 &&
+      badge.criteria_shops.every((id: string) => visitedShopIds.has(id))
+    ) {
+      toAward.push(badge.id);
+    }
   }
 
   if (toAward.length > 0) {

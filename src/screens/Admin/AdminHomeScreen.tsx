@@ -5,18 +5,14 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../navigation/AdminNavigator';
-import { useAdminStats } from '../../hooks/useAdmin';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'AdminHome'>;
 
 export default function AdminHomeScreen({ navigation }: Props) {
-  const { data: stats, isLoading } = useAdminStats();
-
   return (
     <ScrollView
       style={styles.container}
@@ -24,13 +20,6 @@ export default function AdminHomeScreen({ navigation }: Props) {
       showsVerticalScrollIndicator={false}
     >
       <Text style={styles.heading}>Admin Panel</Text>
-
-      {/* Stats Row */}
-      <View style={styles.statsRow}>
-        <StatCard label="Users" value={stats?.totalUsers} loading={isLoading} />
-        <StatCard label="Shops" value={stats?.totalShops} loading={isLoading} />
-        <StatCard label="Check-ins Today" value={stats?.checkInsToday} loading={isLoading} />
-      </View>
 
       {/* Navigation Buttons */}
       <Text style={styles.sectionLabel}>Manage</Text>
@@ -50,28 +39,32 @@ export default function AdminHomeScreen({ navigation }: Props) {
         label="Manage Challenges"
         onPress={() => navigation.navigate('AdminChallenges')}
       />
+      <NavCard
+        icon="bulb-outline"
+        label="Manage Did You Know"
+        onPress={() => navigation.navigate('AdminFacts')}
+      />
+      <NavCard
+        icon="help-circle-outline"
+        label="Manage FAQ"
+        onPress={() => navigation.navigate('AdminFaqItems')}
+      />
+      <NavCard
+        icon="document-text-outline"
+        label="Manage Legal Content"
+        onPress={() => navigation.navigate('AdminLegal')}
+      />
+      <NavCard
+        icon="phone-portrait-outline"
+        label="Manage Onboarding"
+        onPress={() => navigation.navigate('AdminOnboarding')}
+      />
+      <NavCard
+        icon="chatbubbles-outline"
+        label="User Feedback"
+        onPress={() => navigation.navigate('AdminFeedback')}
+      />
     </ScrollView>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  loading,
-}: {
-  label: string;
-  value?: number;
-  loading: boolean;
-}) {
-  return (
-    <View style={styles.statCard}>
-      {loading ? (
-        <ActivityIndicator size="small" color="#2D5016" />
-      ) : (
-        <Text style={styles.statValue}>{value ?? '—'}</Text>
-      )}
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
   );
 }
 
@@ -107,37 +100,6 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     marginBottom: 20,
     marginTop: 8,
-  },
-
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 28,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 10,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
-  },
-  statValue: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#2D5016',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 11,
-    color: '#888',
-    textAlign: 'center',
-    fontWeight: '500',
   },
 
   sectionLabel: {

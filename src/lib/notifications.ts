@@ -34,7 +34,7 @@ export async function registerForPushNotifications(userId: string): Promise<void
     // Android requires an explicit notification channel.
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
-        name: 'Pie & Mash UK',
+        name: 'Pie & Mash',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#2D5016',

@@ -182,6 +182,14 @@ export default function AdminChallengeFormScreen({ navigation, route }: Props) {
           </Text>
         )}
       </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.discardButton}
+        onPress={() => navigation.goBack()}
+        disabled={isPending}
+      >
+        <Text style={styles.discardButtonText}>Discard</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -235,6 +243,12 @@ const styles = StyleSheet.create({
     color: '#4a7a2a',
   },
   bold: { fontWeight: '700' },
+
+  discardButton: {
+    borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 12,
+    borderWidth: 1, borderColor: '#e0ddd8', backgroundColor: '#fff',
+  },
+  discardButtonText: { color: '#666', fontSize: 16, fontWeight: '500' },
 
   submitButton: {
     backgroundColor: '#2D5016',

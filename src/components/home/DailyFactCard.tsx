@@ -1,11 +1,28 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
+import { fetchActiveDidYouKnowFacts } from '../../lib/content';
 import { getDailyFact } from '../../utils/facts';
 
 const NORMANS_CONQUEST_URL = 'https://www.amazon.co.uk/Normans-Conquest-invasion-Englands-traditional/dp/B0G6VF3NRL';
 
+function getDailyFactFromList(facts: { fact: string }[]): string {
+  if (facts.length === 0) return getDailyFact();
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 0);
+  const dayOfYear = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  return facts[dayOfYear % facts.length].fact;
+}
+
 export default function DailyFactCard() {
-  const fact = getDailyFact();
+  const { data: facts = [] } = useQuery({
+    queryKey: ['didYouKnow'],
+    queryFn: () => fetchActiveDidYouKnowFacts(),
+    staleTime: 1000 * 60 * 60, // 1 hour
+  });
+
+  const fact = facts.length > 0 ? getDailyFactFromList(facts) : getDailyFact();
+
   return (
     <View style={styles.card}>
       <Text style={styles.header}>💡 Did you know?</Text>

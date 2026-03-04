@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Badge } from '../../types/database';
 import { Profile } from '../../types/database';
 
@@ -8,6 +8,7 @@ interface Props {
   earned: boolean;
   awardedAt?: string;
   profile?: Profile;
+  onPress?: () => void;
 }
 
 /** How far the user is towards earning this badge (0–1), based on known criteria types. */
@@ -22,11 +23,16 @@ function getProgress(badge: Badge, profile?: Profile): number | null {
   return null;
 }
 
-export default function BadgeItem({ badge, earned, awardedAt, profile }: Props) {
+export default function BadgeItem({ badge, earned, awardedAt, profile, onPress }: Props) {
   const progress = earned ? 1 : getProgress(badge, profile);
 
   return (
-    <View style={[styles.container, !earned && styles.locked]}>
+    <TouchableOpacity
+      style={[styles.container, !earned && styles.locked]}
+      onPress={onPress}
+      activeOpacity={onPress ? 0.7 : 1}
+      disabled={!onPress}
+    >
       {/* Icon */}
       <View style={[styles.iconWrap, earned ? styles.iconEarned : styles.iconLocked]}>
         {badge.icon_url?.startsWith('http') ? (
@@ -57,7 +63,7 @@ export default function BadgeItem({ badge, earned, awardedAt, profile }: Props) 
           {new Date(awardedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
         </Text>
       )}
-    </View>
+    </TouchableOpacity>
   );
 }
 

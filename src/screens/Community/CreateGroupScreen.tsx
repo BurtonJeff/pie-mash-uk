@@ -21,7 +21,7 @@ export default function CreateGroupScreen({ navigation }: Props) {
     if (!name.trim()) return;
     try {
       const group = await mutation.mutateAsync({ name: name.trim(), description: description.trim() });
-      navigation.replace('GroupDetail', { groupId: group.id, groupName: group.name });
+      navigation.replace('GroupDetail', { groupId: group.id, groupName: group.name, inviteCode: group.inviteCode });
     } catch (e: any) {
       Alert.alert('Failed to create group', e.message);
     }

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Pie & Mash UK",
+    "name": "Pie & Mash",
     "slug": "pie-mash-uk",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#2D5016"
     },
     "ios": {
       "supportsTablet": true,
@@ -25,10 +25,8 @@
         }
       },
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#2D5016"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -37,7 +35,14 @@
     },
     "plugins": [
       "expo-apple-authentication",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Pie & Mash uses Face ID to sign you in quickly and securely."
+        }
+      ]
     ]
   }
 }

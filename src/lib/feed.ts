@@ -10,13 +10,14 @@ export interface FeedItem {
   shopCity: string;
   checkedInAt: string;
   photoUrl: string | null;
+  notes: string | null;
   pointsEarned: number;
 }
 
 export async function fetchGlobalFeed(limit = 40): Promise<FeedItem[]> {
   const { data, error } = await supabase
     .from('checkins')
-    .select('id, user_id, checked_in_at, photo_url, points_earned, profiles(username, display_name, avatar_url), shops(name, city)')
+    .select('id, user_id, checked_in_at, photo_url, notes, points_earned, profiles(username, display_name, avatar_url), shops(name, city)')
     .order('checked_in_at', { ascending: false })
     .limit(limit);
 
@@ -32,6 +33,7 @@ export async function fetchGlobalFeed(limit = 40): Promise<FeedItem[]> {
     shopCity: row.shops?.city ?? '',
     checkedInAt: row.checked_in_at,
     photoUrl: row.photo_url,
+    notes: row.notes ?? null,
     pointsEarned: row.points_earned,
   }));
 }
@@ -48,7 +50,7 @@ export async function fetchGroupFeed(groupId: string, limit = 40): Promise<FeedI
 
   const { data, error } = await supabase
     .from('checkins')
-    .select('id, user_id, checked_in_at, photo_url, points_earned, profiles(username, display_name, avatar_url), shops(name, city)')
+    .select('id, user_id, checked_in_at, photo_url, notes, points_earned, profiles(username, display_name, avatar_url), shops(name, city)')
     .in('user_id', memberIds)
     .order('checked_in_at', { ascending: false })
     .limit(limit);
@@ -65,6 +67,7 @@ export async function fetchGroupFeed(groupId: string, limit = 40): Promise<FeedI
     shopCity: row.shops?.city ?? '',
     checkedInAt: row.checked_in_at,
     photoUrl: row.photo_url,
+    notes: row.notes ?? null,
     pointsEarned: row.points_earned,
   }));
 }

@@ -7,11 +7,15 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuthStore } from '../../store/authStore';
 import { useUserCheckins } from '../../hooks/useProfile';
 import VisitRow from '../../components/journey/VisitRow';
+import { JourneyStackParamList } from '../../navigation/JourneyNavigator';
 
-export default function AllVisitsScreen() {
+type Props = NativeStackScreenProps<JourneyStackParamList, 'AllVisits'>;
+
+export default function AllVisitsScreen({ navigation }: Props) {
   const { user } = useAuthStore();
   const { data: checkins = [], isLoading } = useUserCheckins(user?.id ?? '');
 
@@ -35,6 +39,12 @@ export default function AllVisitsScreen() {
             checkedInAt={item.checked_in_at}
             photoUrl={item.photo_url}
             pointsEarned={item.points_earned}
+            onEdit={() => navigation.navigate('EditCheckIn', {
+              checkInId: item.id,
+              shopName: item.shop_name,
+              initialPhotoUrl: item.photo_url ?? null,
+              initialNotes: item.notes ?? null,
+            })}
           />
         )}
         ListEmptyComponent={

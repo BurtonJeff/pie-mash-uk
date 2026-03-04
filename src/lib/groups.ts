@@ -56,6 +56,11 @@ export async function fetchUserGroups(userId: string): Promise<Group[]> {
     }));
 }
 
+function generateInviteCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
+
 export async function createGroup(
   userId: string,
   name: string,
@@ -63,7 +68,7 @@ export async function createGroup(
 ): Promise<Group> {
   const { data: group, error } = await supabase
     .from('groups')
-    .insert({ name, description, created_by: userId })
+    .insert({ name, description, created_by: userId, invite_code: generateInviteCode() })
     .select()
     .single();
 
@@ -135,6 +140,51 @@ export async function fetchGroupMessages(groupId: string): Promise<GroupMessage[
     body: row.body,
     createdAt: row.created_at,
   }));
+}
+
+export interface GroupMember {
+  userId: string;
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+  bio: string | null;
+  totalPoints: number;
+  totalVisits: number;
+  uniqueShopsVisited: number;
+  role: 'admin' | 'member';
+  joinedAt: string;
+}
+
+export async function fetchGroupMembers(groupId: string): Promise<GroupMember[]> {
+  const { data, error } = await supabase
+    .from('group_members')
+    .select('role, joined_at, profiles(id, username, display_name, avatar_url, bio, total_points, total_visits, unique_shops_visited)')
+    .eq('group_id', groupId)
+    .order('joined_at', { ascending: true });
+
+  if (error) throw error;
+
+  return (data ?? []).map((row: any) => ({
+    userId: row.profiles.id,
+    username: row.profiles.username,
+    displayName: row.profiles.display_name,
+    avatarUrl: row.profiles.avatar_url ?? null,
+    bio: row.profiles.bio ?? null,
+    totalPoints: row.profiles.total_points,
+    totalVisits: row.profiles.total_visits,
+    uniqueShopsVisited: row.profiles.unique_shops_visited,
+    role: row.role as 'admin' | 'member',
+    joinedAt: row.joined_at,
+  }));
+}
+
+export async function removeGroupMember(groupId: string, targetUserId: string): Promise<void> {
+  const { error } = await supabase
+    .from('group_members')
+    .delete()
+    .eq('group_id', groupId)
+    .eq('user_id', targetUserId);
+  if (error) throw error;
 }
 
 export async function sendMessage(groupId: string, userId: string, body: string): Promise<void> {

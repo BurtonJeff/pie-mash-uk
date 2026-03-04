@@ -15,12 +15,18 @@ import { useProfile } from '../../hooks/useProfile';
 import { supabase } from '../../lib/supabase';
 import { signOut } from '../../lib/auth';
 import { registerForPushNotifications } from '../../lib/notifications';
+import {
+  isBiometricsAvailable,
+  isBiometricsEnabled,
+  getBiometricLabel,
+  authenticate,
+  enableBiometrics,
+  disableBiometrics,
+} from '../../lib/biometrics';
 
 type Props = NativeStackScreenProps<JourneyStackParamList, 'Settings'>;
 
 const VERSION = Constants.expoConfig?.version ?? '1.0.0';
-const PRIVACY_URL = 'https://piemashanduk.com/privacy';
-const TERMS_URL = 'https://piemashanduk.com/terms';
 
 export default function SettingsScreen({ navigation }: Props) {
   const { user } = useAuthStore();
@@ -35,6 +41,11 @@ export default function SettingsScreen({ navigation }: Props) {
   const [notifLoading, setNotifLoading] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
 
+  const [bioAvailable, setBioAvailable] = useState(false);
+  const [bioEnabled, setBioEnabled] = useState(false);
+  const [bioLabel, setBioLabel] = useState('Biometrics');
+  const [bioLoading, setBioLoading] = useState(false);
+
   useEffect(() => {
     Notifications.getPermissionsAsync().then(({ status }) => {
       const granted = status === 'granted';
@@ -43,11 +54,49 @@ export default function SettingsScreen({ navigation }: Props) {
     });
   }, [profile?.expo_push_token]);
 
+  useEffect(() => {
+    (async () => {
+      const available = await isBiometricsAvailable();
+      if (!available) return;
+      const enabled = await isBiometricsEnabled();
+      const label = await getBiometricLabel();
+      setBioAvailable(true);
+      setBioEnabled(enabled);
+      setBioLabel(label);
+    })();
+  }, []);
+
+  const toggleBiometrics = async (value: boolean) => {
+    setBioLoading(true);
+    try {
+      if (value) {
+        // Authenticate first to confirm identity, then store the refresh token
+        const success = await authenticate(bioLabel);
+        if (!success) return;
+        const { data } = await supabase.auth.getSession();
+        const refreshToken = data.session?.refresh_token;
+        if (!refreshToken) {
+          Alert.alert('Error', 'Could not retrieve session. Please try again.');
+          return;
+        }
+        await enableBiometrics(refreshToken);
+        setBioEnabled(true);
+      } else {
+        await disableBiometrics();
+        setBioEnabled(false);
+      }
+    } catch {
+      Alert.alert('Error', 'Could not update biometric settings. Please try again.');
+    } finally {
+      setBioLoading(false);
+    }
+  };
+
   const toggleNotifications = async (value: boolean) => {
     if (!notifGranted) {
       Alert.alert(
         'Notifications Disabled',
-        'Enable notifications in your device Settings to receive updates from Pie & Mash UK.',
+        'Enable notifications in your device Settings to receive updates from Pie & Mash.',
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Open Settings', onPress: () => Linking.openSettings() },
@@ -131,6 +180,21 @@ export default function SettingsScreen({ navigation }: Props) {
             onPress={handleChangePassword}
             disabled={!email}
           />
+          {bioAvailable && (
+            <>
+              <Separator />
+              <View style={styles.row}>
+                <Text style={styles.rowLabel}>{bioLabel}</Text>
+                <Switch
+                  value={bioEnabled}
+                  onValueChange={toggleBiometrics}
+                  disabled={bioLoading}
+                  trackColor={{ false: '#ddd', true: '#2D5016' }}
+                  thumbColor="#fff"
+                />
+              </View>
+            </>
+          )}
         </View>
 
         {/* ── Notifications ────────────────────────────── */}
@@ -159,9 +223,9 @@ export default function SettingsScreen({ navigation }: Props) {
         {/* ── About ────────────────────────────────────── */}
         <Text style={styles.sectionLabel}>About</Text>
         <View style={styles.group}>
-          <RowLink label="Privacy Policy" onPress={() => Linking.openURL(PRIVACY_URL)} />
+          <RowLink label="Privacy Policy" onPress={() => navigation.navigate('LegalContent', { type: 'privacy_policy' })} />
           <Separator />
-          <RowLink label="Terms of Service" onPress={() => Linking.openURL(TERMS_URL)} />
+          <RowLink label="Terms of Service" onPress={() => navigation.navigate('LegalContent', { type: 'terms_of_service' })} />
           <Separator />
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Version</Text>

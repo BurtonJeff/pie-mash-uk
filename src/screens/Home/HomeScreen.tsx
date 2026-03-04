@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { HomeStackParamList } from '../../navigation/HomeNavigator';
 import { useAuthStore } from '../../store/authStore';
@@ -12,6 +13,7 @@ import { useFeaturedShop } from '../../hooks/useHome';
 import { useGlobalFeed } from '../../hooks/useCommunity';
 import FeaturedShopCard from '../../components/home/FeaturedShopCard';
 import DailyFactCard from '../../components/home/DailyFactCard';
+import FeedbackModal from '../../components/home/FeedbackModal';
 import FeedItemComponent from '../../components/community/FeedItem';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'HomeMain'>;
@@ -19,6 +21,7 @@ type Props = NativeStackScreenProps<HomeStackParamList, 'HomeMain'>;
 export default function HomeScreen({ navigation }: Props) {
   const { user } = useAuthStore();
   const userId = user?.id ?? '';
+  const [feedbackVisible, setFeedbackVisible] = useState(false);
 
   const { data: profile } = useProfile(userId);
   const { data: featured, isLoading: featuredLoading } = useFeaturedShop();
@@ -62,18 +65,46 @@ export default function HomeScreen({ navigation }: Props) {
         {/* Daily fact */}
         <DailyFactCard />
 
+        {/* Feedback */}
+        <TouchableOpacity
+          style={styles.feedbackButton}
+          onPress={() => setFeedbackVisible(true)}
+          activeOpacity={0.75}
+        >
+          <Ionicons name="chatbubble-ellipses-outline" size={18} color="#2D5016" />
+          <Text style={styles.feedbackButtonText}>Share Feedback</Text>
+          <Ionicons name="chevron-forward" size={16} color="#aaa" style={styles.feedbackChevron} />
+        </TouchableOpacity>
+
         {/* Recent community activity */}
         {recentFeed.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Recent Activity</Text>
             <View style={styles.feedCard}>
               {recentFeed.map((item) => (
-                <FeedItemComponent key={item.id} item={item} />
+                <FeedItemComponent
+                  key={item.id}
+                  item={item}
+                  onEdit={item.userId === userId ? () => {
+                    navigation.navigate('EditCheckIn', {
+                      checkInId: item.id,
+                      shopName: item.shopName,
+                      initialPhotoUrl: item.photoUrl,
+                      initialNotes: item.notes,
+                    });
+                  } : undefined}
+                />
               ))}
             </View>
           </View>
         )}
       </ScrollView>
+
+      <FeedbackModal
+        visible={feedbackVisible}
+        userId={userId}
+        onClose={() => setFeedbackVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -129,4 +160,27 @@ const styles = StyleSheet.create({
 
   loader: { marginTop: 20 },
   empty: { fontSize: 14, color: '#aaa', textAlign: 'center', marginTop: 12 },
+
+  feedbackButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 28,
+    gap: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+  },
+  feedbackButtonText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2D5016',
+  },
+  feedbackChevron: { marginLeft: 'auto' },
 });

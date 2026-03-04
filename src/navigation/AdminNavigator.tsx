@@ -7,6 +7,14 @@ import AdminBadgesScreen from '../screens/Admin/AdminBadgesScreen';
 import AdminBadgeFormScreen from '../screens/Admin/AdminBadgeFormScreen';
 import AdminChallengesScreen from '../screens/Admin/AdminChallengesScreen';
 import AdminChallengeFormScreen from '../screens/Admin/AdminChallengeFormScreen';
+import AdminFactsScreen from '../screens/Admin/AdminFactsScreen';
+import AdminFactFormScreen from '../screens/Admin/AdminFactFormScreen';
+import AdminFaqItemsScreen from '../screens/Admin/AdminFaqItemsScreen';
+import AdminFaqItemFormScreen from '../screens/Admin/AdminFaqItemFormScreen';
+import AdminLegalScreen from '../screens/Admin/AdminLegalScreen';
+import AdminOnboardingScreen from '../screens/Admin/AdminOnboardingScreen';
+import AdminOnboardingFormScreen from '../screens/Admin/AdminOnboardingFormScreen';
+import AdminFeedbackScreen from '../screens/Admin/AdminFeedbackScreen';
 
 export type AdminStackParamList = {
   AdminHome: undefined;
@@ -16,6 +24,14 @@ export type AdminStackParamList = {
   AdminBadgeForm: { badgeId?: string };
   AdminChallenges: undefined;
   AdminChallengeForm: { challengeId?: string };
+  AdminFacts: undefined;
+  AdminFactForm: { factId?: string };
+  AdminFaqItems: undefined;
+  AdminFaqItemForm: { itemId?: string };
+  AdminLegal: undefined;
+  AdminOnboarding: undefined;
+  AdminOnboardingForm: { slideId?: string };
+  AdminFeedback: undefined;
 };
 
 const Stack = createNativeStackNavigator<AdminStackParamList>();
@@ -54,6 +70,43 @@ export default function AdminNavigator() {
       <Stack.Screen
         name="AdminChallengeForm"
         component={AdminChallengeFormScreen}
+      />
+      <Stack.Screen
+        name="AdminFacts"
+        component={AdminFactsScreen}
+        options={{ title: 'Did You Know Facts' }}
+      />
+      <Stack.Screen
+        name="AdminFactForm"
+        component={AdminFactFormScreen}
+      />
+      <Stack.Screen
+        name="AdminFaqItems"
+        component={AdminFaqItemsScreen}
+        options={{ title: 'FAQ Items' }}
+      />
+      <Stack.Screen
+        name="AdminFaqItemForm"
+        component={AdminFaqItemFormScreen}
+      />
+      <Stack.Screen
+        name="AdminLegal"
+        component={AdminLegalScreen}
+        options={{ title: 'Legal Content' }}
+      />
+      <Stack.Screen
+        name="AdminOnboarding"
+        component={AdminOnboardingScreen}
+        options={{ title: 'Onboarding Slides' }}
+      />
+      <Stack.Screen
+        name="AdminOnboardingForm"
+        component={AdminOnboardingFormScreen}
+      />
+      <Stack.Screen
+        name="AdminFeedback"
+        component={AdminFeedbackScreen}
+        options={{ title: 'User Feedback' }}
       />
     </Stack.Navigator>
   );

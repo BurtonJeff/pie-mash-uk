@@ -191,8 +191,9 @@ export interface BadgeFormData {
   description: string;
   icon_url: string;
   category: string;
-  criteria_type: 'total_checkins' | 'unique_shops';
+  criteria_type: 'total_checkins' | 'unique_shops' | 'shop_tour';
   criteria_value: string;
+  criteria_shops: string[];
 }
 
 export async function fetchAdminBadgeById(badgeId: string): Promise<Badge> {
@@ -212,6 +213,8 @@ export async function addBadge(data: BadgeFormData): Promise<void> {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '');
 
+  const isShopTour = data.criteria_type === 'shop_tour';
+
   const { error } = await supabase.from('badges').insert({
     slug,
     name: data.name,
@@ -219,7 +222,8 @@ export async function addBadge(data: BadgeFormData): Promise<void> {
     icon_url: data.icon_url,
     category: data.category,
     criteria_type: data.criteria_type,
-    criteria_value: parseInt(data.criteria_value, 10),
+    criteria_value: isShopTour ? data.criteria_shops.length : parseInt(data.criteria_value, 10),
+    criteria_shops: isShopTour ? data.criteria_shops : null,
     is_active: true,
   });
 
@@ -227,6 +231,8 @@ export async function addBadge(data: BadgeFormData): Promise<void> {
 }
 
 export async function updateBadge(badgeId: string, data: BadgeFormData): Promise<void> {
+  const isShopTour = data.criteria_type === 'shop_tour';
+
   const { error } = await supabase
     .from('badges')
     .update({
@@ -235,7 +241,8 @@ export async function updateBadge(badgeId: string, data: BadgeFormData): Promise
       icon_url: data.icon_url,
       category: data.category,
       criteria_type: data.criteria_type,
-      criteria_value: parseInt(data.criteria_value, 10),
+      criteria_value: isShopTour ? data.criteria_shops.length : parseInt(data.criteria_value, 10),
+      criteria_shops: isShopTour ? data.criteria_shops : null,
     })
     .eq('id', badgeId);
 
@@ -402,4 +409,46 @@ export async function setShopPhotoPrimary(shopId: string, photoId: string): Prom
     .eq('id', photoId);
 
   if (error) throw error;
+}
+
+// ─── Feedback ─────────────────────────────────────────────────────────────────
+
+export interface FeedbackItem {
+  id: string;
+  message: string;
+  submitted_at: string;
+  user: {
+    display_name: string;
+    username: string;
+    avatar_url: string | null;
+    total_visits: number;
+    total_points: number;
+  } | null;
+}
+
+export async function fetchAdminFeedback(): Promise<FeedbackItem[]> {
+  const { data, error } = await supabase
+    .from('feedback')
+    .select(`
+      id,
+      message,
+      submitted_at,
+      profiles (
+        display_name,
+        username,
+        avatar_url,
+        total_visits,
+        total_points
+      )
+    `)
+    .order('submitted_at', { ascending: false });
+
+  if (error) throw error;
+
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    message: row.message,
+    submitted_at: row.submitted_at,
+    user: row.profiles ?? null,
+  }));
 }

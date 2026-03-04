@@ -1,0 +1,18 @@
+1. [DONE] I'd like to create a google doc spreadsheet that can be used to fill all the details supported for each pie and mash shop.  his initially will be used by other members of the team to create the content. This will eventually be used to populate the relevant database table or tables for the app with the seed data.
+
+
+2. [DONE] I would like to be able to create a badge that involves visting a specfic list of shops, can we add that feature as well
+
+3. [DONE] It would be nice for a user to be able to edit a checkin they have made.  This would be changing the photos used and any comments.
+
+4. [DONE] We don't need the 'Near me' button on the 'Discover' page.  This should be the default ordering of all shops shown in the list
+
+5. [DONE] The FAQ items should be sourced from the database.  Can we use the current content to seed the table in the database for this
+
+6. [DONE] Remove the 'users', 'shops' and 'check-ins today' from the admin panel
+
+7. [DONE] Add the 'points', 'shops' and 'visits' counts to the 'My Piehole' tab on the 'Profile' screen.  Place it under the user name
+
+8. [DONE] Can you add a members list to when looking at a 'Group' in the 'Community' screen.
+
+9. [DONE] Similar to how the details of a badge are shown when selected can we show the details of a user when they are selected from the members list of a group

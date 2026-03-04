@@ -22,7 +22,17 @@ export function initAuthListener() {
     useAuthStore.getState().setSession(session);
   });
 
-  supabase.auth.onAuthStateChange((_event, session) => {
+  supabase.auth.onAuthStateChange(async (event, session) => {
     useAuthStore.getState().setSession(session);
+
+    // Supabase rotates refresh tokens on every refresh. Keep the stored
+    // biometric token in sync so biometric sign-in doesn't fail with a
+    // stale token.
+    if (event === 'TOKEN_REFRESHED' && session?.refresh_token) {
+      const { isBiometricsEnabled, enableBiometrics } = await import('../lib/biometrics');
+      if (await isBiometricsEnabled()) {
+        await enableBiometrics(session.refresh_token);
+      }
+    }
   });
 }

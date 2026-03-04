@@ -96,6 +96,7 @@ export default function TabNavigator() {
         component={JourneyNavigator}
         options={{
           headerShown: false,
+          tabBarLabel: 'Profile',
           tabBarIcon: tabIcon('person', 'person-outline'),
         }}
       />

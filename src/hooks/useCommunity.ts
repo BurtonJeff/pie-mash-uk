@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchAllTimeLeaderboard, fetchWeeklyLeaderboard, fetchGroupLeaderboard } from '../lib/leaderboard';
 import { fetchGlobalFeed, fetchGroupFeed } from '../lib/feed';
 import { fetchActiveChallenges } from '../lib/challenges';
-import { fetchUserGroups, createGroup, joinGroupByCode, fetchGroupMessages, sendMessage } from '../lib/groups';
+import { fetchUserGroups, createGroup, joinGroupByCode, fetchGroupMessages, sendMessage, fetchGroupMembers, removeGroupMember } from '../lib/groups';
 
 export function useAllTimeLeaderboard() {
   return useQuery({ queryKey: ['leaderboard', 'alltime'], queryFn: () => fetchAllTimeLeaderboard(), staleTime: 60000 });
@@ -73,6 +73,22 @@ export function useSendMessage(groupId: string, userId: string) {
   return useMutation({
     mutationFn: (body: string) => sendMessage(groupId, userId, body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['messages', groupId] }),
+  });
+}
+
+export function useGroupMembers(groupId: string) {
+  return useQuery({
+    queryKey: ['groupMembers', groupId],
+    queryFn: () => fetchGroupMembers(groupId),
+    enabled: !!groupId,
+  });
+}
+
+export function useRemoveGroupMember(groupId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (targetUserId: string) => removeGroupMember(groupId, targetUserId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['groupMembers', groupId] }),
   });
 }
 

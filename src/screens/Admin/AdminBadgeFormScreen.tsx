@@ -9,18 +9,20 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AdminStackParamList } from '../../navigation/AdminNavigator';
-import { useAddBadge, useUpdateBadge, useAdminBadgeById } from '../../hooks/useAdmin';
+import { useAddBadge, useUpdateBadge, useAdminBadgeById, useAdminShops } from '../../hooks/useAdmin';
 import { BadgeFormData } from '../../lib/admin';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'AdminBadgeForm'>;
 
-type CriteriaType = 'total_checkins' | 'unique_shops';
+type CriteriaType = 'total_checkins' | 'unique_shops' | 'shop_tour';
 
 const CRITERIA_OPTIONS: { type: CriteriaType; label: string }[] = [
   { type: 'total_checkins', label: 'Total Check-ins' },
   { type: 'unique_shops', label: 'Unique Shops' },
+  { type: 'shop_tour', label: 'Shop Tour' },
 ];
 
 export default function AdminBadgeFormScreen({ navigation, route }: Props) {
@@ -30,6 +32,8 @@ export default function AdminBadgeFormScreen({ navigation, route }: Props) {
   const addBadge = useAddBadge();
   const updateBadge = useUpdateBadge();
   const { data: existingBadge, isLoading: badgeLoading } = useAdminBadgeById(badgeId);
+  const { data: allShops = [] } = useAdminShops();
+  const [shopSearch, setShopSearch] = useState('');
 
   const [form, setForm] = useState<BadgeFormData>({
     name: '',
@@ -38,6 +42,7 @@ export default function AdminBadgeFormScreen({ navigation, route }: Props) {
     category: '',
     criteria_type: 'total_checkins',
     criteria_value: '',
+    criteria_shops: [],
   });
 
   useLayoutEffect(() => {
@@ -53,6 +58,7 @@ export default function AdminBadgeFormScreen({ navigation, route }: Props) {
         category: existingBadge.category,
         criteria_type: existingBadge.criteria_type as CriteriaType,
         criteria_value: existingBadge.criteria_value.toString(),
+        criteria_shops: existingBadge.criteria_shops ?? [],
       });
     }
   }, [existingBadge]);
@@ -65,10 +71,30 @@ export default function AdminBadgeFormScreen({ navigation, route }: Props) {
     if (!form.description.trim()) return 'Description is required.';
     if (!form.icon_url.trim()) return 'Icon URL / emoji is required.';
     if (!form.category.trim()) return 'Category is required.';
-    const val = parseInt(form.criteria_value, 10);
-    if (isNaN(val) || val <= 0) return 'Criteria value must be a positive number.';
+    if (form.criteria_type === 'shop_tour') {
+      if (form.criteria_shops.length === 0) return 'Select at least one shop for the tour.';
+    } else {
+      const val = parseInt(form.criteria_value, 10);
+      if (isNaN(val) || val <= 0) return 'Criteria value must be a positive number.';
+    }
     return null;
   };
+
+  function toggleShop(shopId: string) {
+    setForm((prev) => ({
+      ...prev,
+      criteria_shops: prev.criteria_shops.includes(shopId)
+        ? prev.criteria_shops.filter((id) => id !== shopId)
+        : [...prev.criteria_shops, shopId],
+    }));
+  }
+
+  const filteredShops = shopSearch.trim()
+    ? allShops.filter((s) =>
+        s.name.toLowerCase().includes(shopSearch.toLowerCase()) ||
+        s.city.toLowerCase().includes(shopSearch.toLowerCase()),
+      )
+    : allShops;
 
   const handleSubmit = () => {
     const err = validate();
@@ -172,15 +198,49 @@ export default function AdminBadgeFormScreen({ navigation, route }: Props) {
         })}
       </View>
 
-      <FieldLabel label="Criteria Value" required />
-      <TextInput
-        style={styles.input}
-        value={form.criteria_value}
-        onChangeText={(v) => set('criteria_value', v)}
-        placeholder="e.g. 10"
-        placeholderTextColor="#bbb"
-        keyboardType="numeric"
-      />
+      {form.criteria_type === 'shop_tour' ? (
+        <>
+          <FieldLabel label={`Shops to Visit (${form.criteria_shops.length} selected)`} required />
+          <TextInput
+            style={styles.input}
+            value={shopSearch}
+            onChangeText={setShopSearch}
+            placeholder="Search shops…"
+            placeholderTextColor="#bbb"
+          />
+          <View style={styles.shopList}>
+            {filteredShops.map((shop) => {
+              const selected = form.criteria_shops.includes(shop.id);
+              return (
+                <TouchableOpacity
+                  key={shop.id}
+                  style={[styles.shopRow, selected && styles.shopRowSelected]}
+                  onPress={() => toggleShop(shop.id)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.shopRowInfo}>
+                    <Text style={styles.shopRowName}>{shop.name}</Text>
+                    <Text style={styles.shopRowCity}>{shop.city}</Text>
+                  </View>
+                  {selected && <Ionicons name="checkmark-circle" size={20} color="#2D5016" />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </>
+      ) : (
+        <>
+          <FieldLabel label="Criteria Value" required />
+          <TextInput
+            style={styles.input}
+            value={form.criteria_value}
+            onChangeText={(v) => set('criteria_value', v)}
+            placeholder="e.g. 10"
+            placeholderTextColor="#bbb"
+            keyboardType="numeric"
+          />
+        </>
+      )}
 
       <TouchableOpacity
         style={[styles.submitButton, isPending && styles.submitButtonDisabled]}
@@ -194,6 +254,14 @@ export default function AdminBadgeFormScreen({ navigation, route }: Props) {
             {isEditing ? 'Save Changes' : 'Add Badge'}
           </Text>
         )}
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.discardButton}
+        onPress={() => navigation.goBack()}
+        disabled={isPending}
+      >
+        <Text style={styles.discardButtonText}>Discard</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -263,6 +331,33 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
   },
+
+  shopList: {
+    borderWidth: 1,
+    borderColor: '#e0ddd8',
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  shopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#ebebeb',
+  },
+  shopRowSelected: { backgroundColor: '#eef4e8' },
+  shopRowInfo: { flex: 1 },
+  shopRowName: { fontSize: 14, fontWeight: '600', color: '#1a1a1a' },
+  shopRowCity: { fontSize: 12, color: '#888', marginTop: 1 },
+
+  discardButton: {
+    borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 12,
+    borderWidth: 1, borderColor: '#e0ddd8', backgroundColor: '#fff',
+  },
+  discardButtonText: { color: '#666', fontSize: 16, fontWeight: '500' },
 
   submitButton: {
     backgroundColor: '#2D5016',

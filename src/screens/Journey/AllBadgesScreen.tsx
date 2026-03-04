@@ -11,6 +11,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/authStore';
 import { useAllBadges, useUserBadges, useProfile } from '../../hooks/useProfile';
 import BadgeItem from '../../components/journey/BadgeItem';
+import BadgeDetailModal from '../../components/journey/BadgeDetailModal';
+import { Badge } from '../../types/database';
 
 type Filter = 'all' | 'earned' | 'locked';
 
@@ -33,6 +35,7 @@ export default function AllBadgesScreen() {
   const { data: profile } = useProfile(userId);
 
   const [filter, setFilter] = useState<Filter>('all');
+  const [selected, setSelected] = useState<{ badge: Badge; awardedAt?: string } | null>(null);
 
   const earnedMap = useMemo(
     () => new Map(userBadges.map((ub) => [ub.badge.id, ub.awarded_at])),
@@ -107,11 +110,19 @@ export default function AllBadgesScreen() {
                   earned={earnedMap.has(badge.id)}
                   awardedAt={earnedMap.get(badge.id)}
                   profile={profile}
+                  onPress={() => setSelected({ badge, awardedAt: earnedMap.get(badge.id) })}
                 />
               ))}
             </View>
           </View>
         )}
+      />
+      <BadgeDetailModal
+        badge={selected?.badge ?? null}
+        earned={selected ? earnedMap.has(selected.badge.id) : false}
+        awardedAt={selected?.awardedAt}
+        profile={profile}
+        onClose={() => setSelected(null)}
       />
     </SafeAreaView>
   );

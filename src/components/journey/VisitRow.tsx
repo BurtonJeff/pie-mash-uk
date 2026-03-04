@@ -1,14 +1,16 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 interface Props {
   shopName: string;
   checkedInAt: string;
   photoUrl?: string | null;
   pointsEarned: number;
+  onEdit?: () => void;
 }
 
-export default function VisitRow({ shopName, checkedInAt, photoUrl, pointsEarned }: Props) {
+export default function VisitRow({ shopName, checkedInAt, photoUrl, pointsEarned, onEdit }: Props) {
   const date = new Date(checkedInAt);
   const dateStr = date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
   const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
@@ -32,6 +34,11 @@ export default function VisitRow({ shopName, checkedInAt, photoUrl, pointsEarned
         <Text style={styles.pointsValue}>+{pointsEarned}</Text>
         <Text style={styles.pointsLabel}>pts</Text>
       </View>
+      {onEdit && (
+        <TouchableOpacity style={styles.editButton} onPress={onEdit} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons name="pencil-outline" size={16} color="#aaa" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -55,7 +62,8 @@ const styles = StyleSheet.create({
   info: { flex: 1, paddingHorizontal: 12 },
   shopName: { fontSize: 14, fontWeight: '600' },
   datetime: { fontSize: 12, color: '#888', marginTop: 2 },
-  points: { paddingRight: 14, alignItems: 'center' },
+  points: { paddingRight: 8, alignItems: 'center' },
+  editButton: { paddingRight: 14, paddingLeft: 4 },
   pointsValue: { fontSize: 16, fontWeight: '800', color: '#2D5016' },
   pointsLabel: { fontSize: 10, color: '#888' },
 });

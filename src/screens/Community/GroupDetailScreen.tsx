@@ -2,21 +2,24 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   TextInput, KeyboardAvoidingView, Platform, ActivityIndicator,
-  Image, Alert,
+  Image, Alert, Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { CommunityStackParamList } from '../../navigation/CommunityNavigator';
 import { useAuthStore } from '../../store/authStore';
-import { useGroupMessages, useSendMessage, useGroupLeaderboard, useGroupFeed } from '../../hooks/useCommunity';
+import { useGroupMessages, useSendMessage, useGroupLeaderboard, useGroupFeed, useGroupMembers, useRemoveGroupMember } from '../../hooks/useCommunity';
+import { GroupMember } from '../../lib/groups';
 import LeaderboardRow from '../../components/community/LeaderboardRow';
 import FeedItemComponent from '../../components/community/FeedItem';
+import MemberDetailModal from '../../components/community/MemberDetailModal';
 import { supabase } from '../../lib/supabase';
 import { GroupMessage } from '../../lib/groups';
+import { Ionicons } from '@expo/vector-icons';
 import { timeAgo } from '../../utils/dateUtils';
 
 type Props = NativeStackScreenProps<CommunityStackParamList, 'GroupDetail'>;
-type SubTab = 'chat' | 'activity' | 'leaderboard';
+type SubTab = 'chat' | 'activity' | 'leaderboard' | 'members';
 
 function ChatBubble({ msg, isOwn }: { msg: GroupMessage; isOwn: boolean }) {
   return (
@@ -31,18 +34,22 @@ function ChatBubble({ msg, isOwn }: { msg: GroupMessage; isOwn: boolean }) {
 }
 
 export default function GroupDetailScreen({ route, navigation }: Props) {
-  const { groupId, groupName } = route.params;
+  const { groupId, groupName, inviteCode } = route.params;
   const { user } = useAuthStore();
   const userId = user?.id ?? '';
 
-  const [subTab, setSubTab] = useState<SubTab>('chat');
+  const [subTab, setSubTab] = useState<SubTab>('members');
   const [draft, setDraft] = useState('');
+  const [selectedMember, setSelectedMember] = useState<GroupMember | null>(null);
   const listRef = useRef<FlatList>(null);
 
   const { data: messages = [], refetch: refetchMessages } = useGroupMessages(groupId);
   const sendMutation = useSendMessage(groupId, userId);
   const leaderboard = useGroupLeaderboard(groupId);
   const feed = useGroupFeed(groupId);
+  const members = useGroupMembers(groupId);
+  const removeMember = useRemoveGroupMember(groupId);
+  const isAdmin = (members.data ?? []).some((m) => m.userId === userId && m.role === 'admin');
 
   React.useLayoutEffect(() => {
     navigation.setOptions({ title: groupName });
@@ -80,9 +87,10 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   }
 
   const SUB_TABS: { key: SubTab; label: string }[] = [
-    { key: 'chat', label: 'Chat' },
-    { key: 'activity', label: 'Activity' },
+    { key: 'members', label: 'Members' },
     { key: 'leaderboard', label: 'Leaderboard' },
+    { key: 'activity', label: 'Activity' },
+    { key: 'chat', label: 'Chat' },
   ];
 
   return (
@@ -168,13 +176,120 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
             keyExtractor={(e) => e.userId}
             contentContainerStyle={styles.listContent}
             renderItem={({ item }) => (
-              <LeaderboardRow entry={item} isCurrentUser={item.userId === userId} />
+              <LeaderboardRow
+                entry={item}
+                isCurrentUser={item.userId === userId}
+                onPress={() => {
+                  const member = (members.data ?? []).find((m) => m.userId === item.userId);
+                  if (member) setSelectedMember(member);
+                }}
+              />
             )}
             ListEmptyComponent={<Text style={styles.empty}>No members yet.</Text>}
           />
         )
       )}
+
+      {/* ── Members ──────────────────────────────────── */}
+      {subTab === 'members' && (
+        members.isLoading ? (
+          <ActivityIndicator style={styles.loader} color="#2D5016" />
+        ) : (
+          <FlatList
+            data={members.data ?? []}
+            keyExtractor={(m) => m.userId}
+            contentContainerStyle={styles.listContent}
+            ListHeaderComponent={inviteCode ? (
+              <View style={styles.inviteBox}>
+                <View style={styles.inviteLeft}>
+                  <Text style={styles.inviteLabel}>Invite Code</Text>
+                  <Text style={styles.inviteCode}>{inviteCode}</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.shareBtn}
+                  onPress={() => Share.share({ message: `Join my Pie & Mash group with code: ${inviteCode}` })}
+                >
+                  <Ionicons name="share-outline" size={18} color="#2D5016" />
+                  <Text style={styles.shareBtnText}>Share</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+            renderItem={({ item }) => (
+              <MemberRow
+                member={item}
+                isCurrentUser={item.userId === userId}
+                canRemove={isAdmin && item.userId !== userId}
+                onPress={() => setSelectedMember(item)}
+                onRemove={() => {
+                  Alert.alert(
+                    'Remove Member',
+                    `Remove ${item.displayName} from this group?`,
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Remove', style: 'destructive', onPress: () => removeMember.mutate(item.userId) },
+                    ],
+                  );
+                }}
+              />
+            )}
+            ListEmptyComponent={<Text style={styles.empty}>No members yet.</Text>}
+          />
+        )
+      )}
+
+      <MemberDetailModal member={selectedMember} onClose={() => setSelectedMember(null)} />
     </SafeAreaView>
+  );
+}
+
+function MemberRow({ member, isCurrentUser, canRemove, onPress, onRemove }: {
+  member: GroupMember;
+  isCurrentUser: boolean;
+  canRemove: boolean;
+  onPress: () => void;
+  onRemove: () => void;
+}) {
+  const initials = (() => {
+    const parts = member.displayName.trim().split(' ');
+    return parts.length >= 2
+      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+      : member.displayName.slice(0, 2).toUpperCase();
+  })();
+
+  return (
+    <TouchableOpacity style={styles.memberRow} onPress={onPress} activeOpacity={0.7}>
+      {member.avatarUrl ? (
+        <Image source={{ uri: member.avatarUrl }} style={styles.memberAvatar} />
+      ) : (
+        <View style={styles.memberAvatarPlaceholder}>
+          <Text style={styles.memberInitials}>{initials}</Text>
+        </View>
+      )}
+      <View style={styles.memberInfo}>
+        <View style={styles.memberNameRow}>
+          <Text style={styles.memberName}>{member.displayName}</Text>
+          {member.role === 'admin' && (
+            <View style={styles.adminBadge}>
+              <Text style={styles.adminBadgeText}>Admin</Text>
+            </View>
+          )}
+          {isCurrentUser && (
+            <View style={styles.youBadge}>
+              <Text style={styles.youBadgeText}>You</Text>
+            </View>
+          )}
+        </View>
+      </View>
+      <View style={styles.memberStats}>
+        <Text style={styles.memberStatValue}>{member.totalPoints}</Text>
+        <Text style={styles.memberStatLabel}>pts</Text>
+      </View>
+      {canRemove && (
+        <TouchableOpacity onPress={onRemove} style={styles.removeButton} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons name="person-remove-outline" size={18} color="#c0392b" />
+        </TouchableOpacity>
+      )}
+    </TouchableOpacity>
   );
 }
 
@@ -237,4 +352,56 @@ const styles = StyleSheet.create({
   listContent: { padding: 16, paddingBottom: 32 },
   loader: { marginTop: 60 },
   empty: { textAlign: 'center', color: '#aaa', fontSize: 14, marginTop: 40 },
+
+  // Invite code
+  inviteBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eef4e8',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+  },
+  inviteLeft: { flex: 1 },
+  inviteLabel: { fontSize: 11, fontWeight: '600', color: '#2D5016', textTransform: 'uppercase', letterSpacing: 0.5 },
+  inviteCode: { fontSize: 26, fontWeight: '800', color: '#1a1a1a', letterSpacing: 4, marginTop: 2 },
+  shareBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
+  shareBtnText: { fontSize: 14, fontWeight: '600', color: '#2D5016' },
+
+  // Members
+  memberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  memberAvatar: { width: 44, height: 44, borderRadius: 22 },
+  memberAvatarPlaceholder: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: '#2D5016', alignItems: 'center', justifyContent: 'center',
+  },
+  memberInitials: { fontSize: 16, fontWeight: '700', color: '#fff' },
+  memberInfo: { flex: 1, marginLeft: 12 },
+  memberNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  memberName: { fontSize: 15, fontWeight: '600', color: '#1a1a1a' },
+  adminBadge: {
+    backgroundColor: '#fff3e0', borderRadius: 4,
+    paddingHorizontal: 6, paddingVertical: 2,
+  },
+  adminBadgeText: { fontSize: 10, fontWeight: '700', color: '#b45309' },
+  youBadge: {
+    backgroundColor: '#eef4e8', borderRadius: 4,
+    paddingHorizontal: 6, paddingVertical: 2,
+  },
+  youBadgeText: { fontSize: 10, fontWeight: '700', color: '#2D5016' },
+  memberStats: { alignItems: 'center' },
+  memberStatValue: { fontSize: 16, fontWeight: '800', color: '#2D5016' },
+  memberStatLabel: { fontSize: 10, color: '#888' },
+  removeButton: { marginLeft: 10 },
 });

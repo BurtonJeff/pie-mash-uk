@@ -9,12 +9,15 @@ export interface LeaderboardEntry {
   avatarUrl: string | null;
   points: number;
   uniqueShops: number;
+  totalVisits: number;
+  bio: string | null;
+  memberSince: string;
 }
 
 export async function fetchAllTimeLeaderboard(limit = 50): Promise<LeaderboardEntry[]> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, display_name, avatar_url, total_points, unique_shops_visited')
+    .select('id, username, display_name, avatar_url, total_points, unique_shops_visited, total_visits, bio, created_at')
     .order('total_points', { ascending: false })
     .limit(limit);
 
@@ -28,13 +31,16 @@ export async function fetchAllTimeLeaderboard(limit = 50): Promise<LeaderboardEn
     avatarUrl: p.avatar_url,
     points: p.total_points,
     uniqueShops: p.unique_shops_visited,
+    totalVisits: p.total_visits,
+    bio: p.bio ?? null,
+    memberSince: p.created_at,
   }));
 }
 
 export async function fetchWeeklyLeaderboard(limit = 50): Promise<LeaderboardEntry[]> {
   const { data, error } = await supabase
     .from('checkins')
-    .select('user_id, points_earned, profiles(id, username, display_name, avatar_url, unique_shops_visited)')
+    .select('user_id, points_earned, profiles(id, username, display_name, avatar_url, unique_shops_visited, total_visits, bio, created_at)')
     .gte('checked_in_at', weekStart());
 
   if (error) throw error;
@@ -56,6 +62,9 @@ export async function fetchWeeklyLeaderboard(limit = 50): Promise<LeaderboardEnt
         avatarUrl: p.avatar_url,
         points: row.points_earned,
         uniqueShops: p.unique_shops_visited,
+        totalVisits: p.total_visits,
+        bio: p.bio ?? null,
+        memberSince: p.created_at,
       });
     }
   }
@@ -69,7 +78,7 @@ export async function fetchWeeklyLeaderboard(limit = 50): Promise<LeaderboardEnt
 export async function fetchGroupLeaderboard(groupId: string): Promise<LeaderboardEntry[]> {
   const { data, error } = await supabase
     .from('group_members')
-    .select('profiles(id, username, display_name, avatar_url, total_points, unique_shops_visited)')
+    .select('profiles(id, username, display_name, avatar_url, total_points, unique_shops_visited, total_visits, bio, created_at)')
     .eq('group_id', groupId);
 
   if (error) throw error;
@@ -86,5 +95,8 @@ export async function fetchGroupLeaderboard(groupId: string): Promise<Leaderboar
       avatarUrl: p.avatar_url,
       points: p.total_points,
       uniqueShops: p.unique_shops_visited,
+      totalVisits: p.total_visits,
+      bio: p.bio ?? null,
+      memberSince: p.created_at,
     }));
 }

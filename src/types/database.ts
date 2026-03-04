@@ -59,6 +59,7 @@ export interface Badge {
   category: string;
   criteria_type: string;
   criteria_value: number;
+  criteria_shops: string[] | null;
   is_active: boolean;
 }
 

@@ -1,46 +1,61 @@
 import React, { useRef, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  Dimensions, NativeScrollEvent, NativeSyntheticEvent,
+  Dimensions, NativeScrollEvent, NativeSyntheticEvent, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQuery } from '@tanstack/react-query';
+import { fetchActiveOnboardingSlides, OnboardingSlide } from '../../lib/content';
 
 const { width } = Dimensions.get('window');
 
 export const ONBOARDING_KEY = 'hasSeenOnboarding';
 
-interface Slide {
-  key: string;
-  emoji: string;
-  title: string;
-  subtitle: string;
-}
-
-const SLIDES: Slide[] = [
+const FALLBACK_SLIDES: OnboardingSlide[] = [
   {
-    key: '1',
-    emoji: '🥧',
-    title: 'Welcome to\nPie & Mash UK',
+    id: '1',
+    title: 'Welcome to\nPie & Mash',
     subtitle: "Your definitive guide to Britain's finest traditional pie & mash shops.",
+    emoji: '🥧',
+    image_url: null,
+    sort_order: 0,
+    is_active: true,
+    created_at: '',
   },
   {
-    key: '2',
-    emoji: '📍',
+    id: '2',
     title: 'Check In\n& Earn Points',
     subtitle: 'Visit a shop, snap a photo, and check in. Every visit earns you points and badges.',
+    emoji: '📍',
+    image_url: null,
+    sort_order: 1,
+    is_active: true,
+    created_at: '',
   },
   {
-    key: '3',
-    emoji: '🏆',
+    id: '3',
     title: 'Compete\n& Connect',
     subtitle: 'Climb the leaderboard, collect badges, and challenge your mates in groups.',
+    emoji: '🏆',
+    image_url: null,
+    sort_order: 2,
+    is_active: true,
+    created_at: '',
   },
 ];
 
 export default function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
-  const flatRef = useRef<FlatList<Slide>>(null);
+  const flatRef = useRef<FlatList<OnboardingSlide>>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+
+  const { data: slides = FALLBACK_SLIDES } = useQuery({
+    queryKey: ['onboardingSlides'],
+    queryFn: () => fetchActiveOnboardingSlides(),
+    initialData: FALLBACK_SLIDES,
+    initialDataUpdatedAt: 0,
+    staleTime: 5 * 60 * 1000,
+  });
 
   const handleScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const index = Math.round(e.nativeEvent.contentOffset.x / width);
@@ -48,7 +63,7 @@ export default function OnboardingScreen({ onComplete }: { onComplete: () => voi
   }, []);
 
   const goNext = () => {
-    if (activeIndex < SLIDES.length - 1) {
+    if (activeIndex < slides.length - 1) {
       const next = activeIndex + 1;
       flatRef.current?.scrollToIndex({ index: next, animated: true });
       setActiveIndex(next);
@@ -62,15 +77,14 @@ export default function OnboardingScreen({ onComplete }: { onComplete: () => voi
     onComplete();
   };
 
-  const isLast = activeIndex === SLIDES.length - 1;
+  const isLast = activeIndex === slides.length - 1;
 
   return (
     <View style={styles.root}>
-      {/* Slides */}
       <FlatList
         ref={flatRef}
-        data={SLIDES}
-        keyExtractor={(s) => s.key}
+        data={slides}
+        keyExtractor={(s) => String(s.sort_order)}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
@@ -79,11 +93,13 @@ export default function OnboardingScreen({ onComplete }: { onComplete: () => voi
         style={styles.list}
         renderItem={({ item }) => (
           <View style={styles.slide}>
-            {/* Hero area */}
-            <View style={styles.hero}>
-              <Text style={styles.emoji}>{item.emoji}</Text>
-            </View>
-            {/* Content area */}
+            {item.image_url ? (
+              <Image source={{ uri: item.image_url }} style={styles.heroImage} resizeMode="cover" />
+            ) : (
+              <View style={styles.hero}>
+                <Text style={styles.emoji}>{item.emoji}</Text>
+              </View>
+            )}
             <View style={styles.content}>
               <Text style={styles.title}>{item.title}</Text>
               <Text style={styles.subtitle}>{item.subtitle}</Text>
@@ -92,10 +108,9 @@ export default function OnboardingScreen({ onComplete }: { onComplete: () => voi
         )}
       />
 
-      {/* Footer: dots + buttons */}
       <SafeAreaView style={styles.footer}>
         <View style={styles.dots}>
-          {SLIDES.map((_, i) => (
+          {slides.map((_, i) => (
             <View key={i} style={[styles.dot, i === activeIndex && styles.dotActive]} />
           ))}
         </View>
@@ -127,6 +142,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#2D5016',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  heroImage: {
+    flex: 1,
+    width,
   },
   emoji: { fontSize: 100 },
 

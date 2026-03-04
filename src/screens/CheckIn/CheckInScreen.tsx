@@ -20,7 +20,7 @@ import { useShops } from '../../hooks/useShops';
 import { useSubmitCheckIn } from '../../hooks/useCheckin';
 import { useAuthStore } from '../../store/authStore';
 import { ShopWithPhoto } from '../../lib/shops';
-import { distanceKm, formatDistance, formatAddress } from '../../utils/shopUtils';
+import { distanceKm, formatDistance, formatAddress, isOpenNow, OpeningHours } from '../../utils/shopUtils';
 import BadgeCelebration from '../../components/checkin/BadgeCelebration';
 import { CheckInResult } from '../../lib/checkins';
 
@@ -127,6 +127,7 @@ export default function CheckInScreen() {
         longitude: userLocation.longitude,
         photoUri,
         notes: note.trim() || undefined,
+        isFeatured: selected.is_featured,
       });
       setResult(checkinResult);
       setStep('success');
@@ -147,6 +148,9 @@ export default function CheckInScreen() {
 
   const selectedDistance = selected ? getDistance(selected) : null;
   const withinRange = selectedDistance !== null && selectedDistance * 1000 <= CHECK_IN_RADIUS_M;
+  const shopIsOpen = selected
+    ? isOpenNow(selected.opening_hours as unknown as OpeningHours)
+    : true;
 
   // ── Success ────────────────────────────────────────────────
   if (step === 'success' && result && selected) {
@@ -190,10 +194,19 @@ export default function CheckInScreen() {
               <Text style={styles.shopCardName}>{selected.name}</Text>
               <Text style={styles.shopCardAddress}>{formatAddress(selected)}</Text>
 
+              {/* Shop of the Week bonus banner */}
+              {selected.is_featured && (
+                <View style={styles.featuredBanner}>
+                  <Text style={styles.featuredBannerText}>
+                    ⭐ Shop of the Week — +10 bonus points!
+                  </Text>
+                </View>
+              )}
+
               {/* GPS status */}
-              <View style={[styles.gpsRow, withinRange ? styles.gpsGreen : styles.gpsRed]}>
-                <Text style={styles.gpsIcon}>{withinRange ? '●' : '●'}</Text>
-                <Text style={styles.gpsText}>
+              <View style={[styles.statusRow, withinRange ? styles.statusGreen : styles.statusRed]}>
+                <Text style={styles.statusIcon}>●</Text>
+                <Text style={styles.statusText}>
                   {selectedDistance === null
                     ? 'Acquiring location…'
                     : withinRange
@@ -201,6 +214,14 @@ export default function CheckInScreen() {
                     : `Too far away — ${formatDistance(selectedDistance)} (need ≤200m)`}
                 </Text>
               </View>
+
+              {/* Closed status */}
+              {!shopIsOpen && (
+                <View style={[styles.statusRow, styles.statusOrange]}>
+                  <Text style={styles.statusIcon}>●</Text>
+                  <Text style={styles.statusText}>This shop is currently closed</Text>
+                </View>
+              )}
             </View>
 
             {/* Photo section */}
@@ -238,12 +259,16 @@ export default function CheckInScreen() {
 
             {/* Submit */}
             <TouchableOpacity
-              style={[styles.submitButton, !withinRange && styles.submitButtonDisabled]}
+              style={[styles.submitButton, (!withinRange || !shopIsOpen) && styles.submitButtonDisabled]}
               onPress={submit}
-              disabled={!withinRange}
+              disabled={!withinRange || !shopIsOpen}
             >
               <Text style={styles.submitText}>
-                {withinRange ? 'Check in!' : 'Too far away to check in'}
+                {!withinRange
+                  ? 'Too far away to check in'
+                  : !shopIsOpen
+                  ? 'Shop is currently closed'
+                  : 'Check in!'}
               </Text>
             </TouchableOpacity>
 
@@ -286,11 +311,18 @@ export default function CheckInScreen() {
           renderItem={({ item }) => {
             const dist = item.distKm;
             const inRange = dist !== null && dist * 1000 <= CHECK_IN_RADIUS_M;
+            const isOpen = isOpenNow(item.opening_hours as unknown as OpeningHours);
             return (
-              <TouchableOpacity style={styles.shopRow} onPress={() => selectShop(item)}>
+              <TouchableOpacity
+                style={[styles.shopRow, item.is_featured && styles.shopRowFeatured]}
+                onPress={() => selectShop(item)}
+              >
                 <View style={styles.shopRowInfo}>
                   <Text style={styles.shopRowName}>{item.name}</Text>
-                  <Text style={styles.shopRowCity}>{item.city}</Text>
+                  {item.is_featured && (
+                    <Text style={styles.shopRowFeaturedLabel}>⭐ Shop of the Week</Text>
+                  )}
+                  <Text style={styles.shopRowCity}>{item.city} · {item.postcode}</Text>
                 </View>
                 <View style={styles.shopRowRight}>
                   {dist !== null && (
@@ -299,6 +331,7 @@ export default function CheckInScreen() {
                     </Text>
                   )}
                   {inRange && <Text style={styles.nearbyBadge}>Nearby</Text>}
+                  {!isOpen && <Text style={styles.closedBadge}>Closed</Text>}
                 </View>
               </TouchableOpacity>
             );
@@ -347,6 +380,18 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 1,
   },
+  shopRowFeatured: {
+    backgroundColor: '#fffbf0',
+    borderLeftWidth: 3,
+    borderLeftColor: '#f59e0b',
+  },
+  shopRowFeaturedLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#b45309',
+    marginTop: 2,
+    marginBottom: 1,
+  },
   shopRowInfo: { flex: 1 },
   shopRowName: { fontSize: 15, fontWeight: '600' },
   shopRowCity: { fontSize: 13, color: '#888', marginTop: 2 },
@@ -380,11 +425,31 @@ const styles = StyleSheet.create({
   },
   shopCardName: { fontSize: 18, fontWeight: '700', marginBottom: 4 },
   shopCardAddress: { fontSize: 13, color: '#888', marginBottom: 12 },
-  gpsRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 8, padding: 10 },
-  gpsGreen: { backgroundColor: '#e8f5e9' },
-  gpsRed: { backgroundColor: '#fce4e4' },
-  gpsIcon: { fontSize: 10 },
-  gpsText: { fontSize: 13, fontWeight: '600', flex: 1 },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 8, padding: 10, marginTop: 8 },
+  statusGreen: { backgroundColor: '#e8f5e9' },
+  statusRed: { backgroundColor: '#fce4e4' },
+  statusOrange: { backgroundColor: '#fff3e0' },
+  statusIcon: { fontSize: 10 },
+  statusText: { fontSize: 13, fontWeight: '600', flex: 1 },
+
+  featuredBanner: {
+    backgroundColor: '#fff8e1',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginTop: 8,
+  },
+  featuredBannerText: { fontSize: 13, fontWeight: '600', color: '#b45309' },
+
+  closedBadge: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#888',
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
 
   sectionLabel: { fontSize: 14, fontWeight: '700', color: '#444', marginBottom: 10 },
   optional: { fontWeight: '400', color: '#999' },

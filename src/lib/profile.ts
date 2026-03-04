@@ -1,3 +1,4 @@
+import { File } from 'expo-file-system/next';
 import { supabase } from './supabase';
 import { Profile, Badge } from '../types/database';
 
@@ -59,4 +60,23 @@ export async function updateProfile(
 ): Promise<void> {
   const { error } = await supabase.from('profiles').update(updates).eq('id', userId);
   if (error) throw error;
+}
+
+/** Upload a local image URI as the user's avatar; returns the public URL. */
+export async function uploadAvatar(userId: string, uri: string): Promise<string> {
+  const ext = uri.split('.').pop()?.toLowerCase() ?? 'jpg';
+  const path = `${userId}/avatar.${ext}`;
+
+  const file = new File(uri);
+  const bytes = await file.bytes();
+
+  const { error } = await supabase.storage
+    .from('checkin-photos')
+    .upload(path, bytes, { contentType: `image/${ext}`, upsert: true });
+
+  if (error) throw error;
+
+  const { data } = supabase.storage.from('checkin-photos').getPublicUrl(path);
+  // Append a timestamp so React Native doesn't serve a stale cached version
+  return `${data.publicUrl}?t=${Date.now()}`;
 }

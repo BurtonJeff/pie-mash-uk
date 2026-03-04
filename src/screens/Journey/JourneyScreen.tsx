@@ -1,12 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-  ActivityIndicator,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity,
+  Image, ActivityIndicator, FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,15 +9,14 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { JourneyStackParamList } from '../../navigation/JourneyNavigator';
 import { useAuthStore } from '../../store/authStore';
 import { useProfile, useUserBadges, useUserCheckins } from '../../hooks/useProfile';
-import StatCard from '../../components/journey/StatCard';
 import BadgeItem from '../../components/journey/BadgeItem';
+import BadgeDetailModal from '../../components/journey/BadgeDetailModal';
 import VisitRow from '../../components/journey/VisitRow';
 import { signOut } from '../../lib/auth';
+import { Badge } from '../../types/database';
 
 type Props = NativeStackScreenProps<JourneyStackParamList, 'JourneyHome'>;
-
-const RECENT_VISITS_LIMIT = 5;
-const BADGE_PREVIEW_LIMIT = 6;
+type Tab = 'piehole' | 'badges' | 'visits';
 
 function Initials({ name }: { name: string }) {
   const parts = name.trim().split(' ');
@@ -36,9 +30,17 @@ function Initials({ name }: { name: string }) {
   );
 }
 
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'piehole', label: 'My Piehole' },
+  { key: 'badges', label: 'Badges' },
+  { key: 'visits', label: 'Visit History' },
+];
+
 export default function JourneyScreen({ navigation }: Props) {
   const { user, initialized } = useAuthStore();
   const userId = user?.id ?? '';
+  const [tab, setTab] = useState<Tab>('piehole');
+  const [selectedBadge, setSelectedBadge] = useState<{ badge: Badge; awardedAt?: string } | null>(null);
 
   const { data: profile, isLoading: profileLoading } = useProfile(userId);
   const { data: userBadges = [] } = useUserBadges(userId);
@@ -60,141 +62,242 @@ export default function JourneyScreen({ navigation }: Props) {
     );
   }
 
-  const earnedBadgeIds = new Set(userBadges.map((ub) => ub.badge.id));
-  const recentVisits = checkins.slice(0, RECENT_VISITS_LIMIT);
-  const previewBadges = userBadges.slice(0, BADGE_PREVIEW_LIMIT);
+  const memberSince = new Date(profile.created_at).toLocaleDateString('en-GB', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  });
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
 
-        {/* ── Profile header ─────────────────────────────── */}
-        <View style={styles.profileHeader}>
-          <View style={styles.avatarRow}>
+      {/* ── Tab bar ──────────────────────────────────────── */}
+      <View style={styles.tabBar}>
+        {TABS.map(({ key, label }) => (
+          <TouchableOpacity
+            key={key}
+            style={[styles.tab, tab === key && styles.tabActive]}
+            onPress={() => setTab(key)}
+          >
+            <Text style={[styles.tabText, tab === key && styles.tabTextActive]}>{label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* ── My Piehole ───────────────────────────────────── */}
+      {tab === 'piehole' && (
+        <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
+
+          {/* Profile row */}
+          <View style={styles.profileRow}>
             {profile.avatar_url ? (
               <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
             ) : (
               <Initials name={profile.display_name || profile.username} />
             )}
-            <View style={styles.nameBlock}>
+            <View style={styles.profileInfo}>
               <Text style={styles.displayName}>{profile.display_name}</Text>
-              <Text style={styles.username}>@{profile.username}</Text>
+              <View style={styles.statsRow}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{profile.total_points}</Text>
+                  <Text style={styles.statLabel}>Points</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{profile.unique_shops_visited}</Text>
+                  <Text style={styles.statLabel}>Shops</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{profile.total_visits}</Text>
+                  <Text style={styles.statLabel}>Visits</Text>
+                </View>
+              </View>
+              <Text style={styles.memberSince}>Proud user since {memberSince}</Text>
+              {profile.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
             </View>
-            <TouchableOpacity onPress={() => navigation.navigate('EditProfile')} style={styles.editButton}>
-              <Text style={styles.editButtonText}>Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.settingsIconButton}>
-              <Ionicons name="settings-outline" size={22} color="#555" />
-            </TouchableOpacity>
           </View>
 
-          {profile.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
-
-          {/* Stats */}
-          <View style={styles.statsRow}>
-            <StatCard value={profile.total_points.toLocaleString()} label="Points" />
-            <View style={styles.statGap} />
-            <StatCard value={profile.unique_shops_visited} label="Shops" />
-            <View style={styles.statGap} />
-            <StatCard value={profile.total_visits} label="Visits" />
+          {/* Options */}
+          <View style={styles.accountSection}>
+            <AccountRow
+              icon="person-outline"
+              iconBg="#e8f0fb"
+              iconColor="#2c5fba"
+              label="Edit Profile"
+              onPress={() => navigation.navigate('EditProfile')}
+            />
+            <AccountDivider />
+            <AccountRow
+              icon="help-circle-outline"
+              iconBg="#eef2ea"
+              iconColor="#2D5016"
+              label="Help & FAQ"
+              onPress={() => navigation.navigate('FAQ')}
+            />
+            <AccountDivider />
+            <AccountRow
+              icon="settings-outline"
+              iconBg="#f0f0f0"
+              iconColor="#555"
+              label="Settings"
+              onPress={() => navigation.navigate('Settings')}
+            />
+            <AccountDivider />
+            <AccountRow
+              icon="log-out-outline"
+              iconBg="#fdecea"
+              iconColor="#c0392b"
+              label="Sign Out"
+              destructive
+              onPress={signOut}
+            />
           </View>
-        </View>
 
-        {/* ── Badge Collection ───────────────────────────── */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Badges</Text>
+        </ScrollView>
+      )}
+
+      {/* ── Badges ───────────────────────────────────────── */}
+      {tab === 'badges' && (
+        <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.badgesHeader}>
+            <Text style={styles.badgesCount}>
+              {userBadges.length} badge{userBadges.length !== 1 ? 's' : ''} earned
+            </Text>
             <TouchableOpacity onPress={() => navigation.navigate('AllBadges')}>
-              <Text style={styles.seeAll}>See all →</Text>
+              <Text style={styles.seeAll}>View full collection →</Text>
             </TouchableOpacity>
           </View>
-
-          {previewBadges.length === 0 ? (
-            <View style={styles.emptyCard}>
+          {userBadges.length === 0 ? (
+            <View style={styles.emptyWrap}>
               <Text style={styles.emptyEmoji}>🏅</Text>
-              <Text style={styles.emptyTitle}>No badges yet</Text>
-              <Text style={styles.emptyBody}>Check in at your first shop to earn your first badge.</Text>
+              <Text style={styles.empty}>No badges yet</Text>
+              <Text style={styles.emptySub}>Check in at your first shop to earn your first badge.</Text>
             </View>
           ) : (
             <View style={styles.badgeGrid}>
-              {previewBadges.map((ub) => (
+              {userBadges.map((ub) => (
                 <BadgeItem
                   key={ub.badge.id}
                   badge={ub.badge}
                   earned
                   awardedAt={ub.awarded_at}
                   profile={profile}
+                  onPress={() => setSelectedBadge({ badge: ub.badge, awardedAt: ub.awarded_at })}
                 />
               ))}
             </View>
           )}
+        </ScrollView>
+      )}
 
-          <TouchableOpacity style={styles.allBadgesButton} onPress={() => navigation.navigate('AllBadges')}>
-            <Text style={styles.allBadgesText}>
-              {earnedBadgeIds.size} badge{earnedBadgeIds.size !== 1 ? 's' : ''} earned · View full collection
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* ── Visit History ──────────────────────────────── */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Visit History</Text>
-            {checkins.length > RECENT_VISITS_LIMIT && (
-              <TouchableOpacity onPress={() => navigation.navigate('AllVisits')}>
-                <Text style={styles.seeAll}>See all →</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {checkinsLoading ? (
-            <ActivityIndicator color="#2D5016" style={{ marginTop: 12 }} />
-          ) : recentVisits.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyEmoji}>📍</Text>
-              <Text style={styles.emptyTitle}>No visits yet</Text>
-              <Text style={styles.emptyBody}>Head to the Check In tab to log your first visit.</Text>
-            </View>
-          ) : (
-            recentVisits.map((c) => (
-              <VisitRow
-                key={c.id}
-                shopName={c.shop_name}
-                checkedInAt={c.checked_in_at}
-                photoUrl={c.photo_url}
-                pointsEarned={c.points_earned}
-              />
-            ))
+      {/* ── Visit History ─────────────────────────────────── */}
+      {checkinsLoading && tab === 'visits' && (
+        <ActivityIndicator style={styles.loader} color="#2D5016" />
+      )}
+      {!checkinsLoading && tab === 'visits' && (
+        <FlatList
+          data={checkins}
+          keyExtractor={(c) => c.id}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => (
+            <VisitRow
+              shopName={item.shop_name}
+              checkedInAt={item.checked_in_at}
+              photoUrl={item.photo_url}
+              pointsEarned={item.points_earned}
+              onEdit={() => navigation.navigate('EditCheckIn', {
+                checkInId: item.id,
+                shopName: item.shop_name,
+                initialPhotoUrl: item.photo_url ?? null,
+                initialNotes: item.notes ?? null,
+              })}
+            />
           )}
-        </View>
+          ListEmptyComponent={
+            <View style={styles.emptyWrap}>
+              <Text style={styles.emptyEmoji}>📍</Text>
+              <Text style={styles.empty}>No visits yet</Text>
+              <Text style={styles.emptySub}>Head to the Check In tab to log your first visit.</Text>
+            </View>
+          }
+        />
+      )}
 
-        {/* ── Help ───────────────────────────────────────── */}
-        <TouchableOpacity
-          style={styles.faqButton}
-          onPress={() => navigation.navigate('FAQ')}
-        >
-          <Text style={styles.faqText}>Help & FAQ</Text>
-        </TouchableOpacity>
-
-        {/* ── Sign Out ───────────────────────────────────── */}
-        <TouchableOpacity style={styles.signOutButton} onPress={signOut}>
-          <Text style={styles.signOutText}>Sign Out</Text>
-        </TouchableOpacity>
-
-      </ScrollView>
+      <BadgeDetailModal
+        badge={selectedBadge?.badge ?? null}
+        earned={!!selectedBadge}
+        awardedAt={selectedBadge?.awardedAt}
+        profile={profile}
+        onClose={() => setSelectedBadge(null)}
+      />
     </SafeAreaView>
   );
 }
 
+// ── Helper components ─────────────────────────────────────────────────────────
+
+function AccountRow({
+  icon, iconBg, iconColor, label, destructive = false, onPress,
+}: {
+  icon: string; iconBg: string; iconColor: string;
+  label: string; destructive?: boolean; onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity style={styles.accountRow} onPress={onPress} activeOpacity={0.7}>
+      <View style={styles.accountRowLeft}>
+        <View style={[styles.accountIconWrap, { backgroundColor: iconBg }]}>
+          <Ionicons name={icon as any} size={18} color={iconColor} />
+        </View>
+        <Text style={[styles.accountRowText, destructive && styles.destructiveText]}>{label}</Text>
+      </View>
+      {!destructive && <Ionicons name="chevron-forward" size={17} color="#ccc" />}
+    </TouchableOpacity>
+  );
+}
+
+function AccountDivider() {
+  return <View style={styles.accountDivider} />;
+}
+
+// ── Styles ────────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8f5f0' },
-  scroll: { paddingBottom: 40 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   errorText: { color: '#c00', fontSize: 15 },
 
-  profileHeader: { backgroundColor: '#fff', padding: 20, marginBottom: 16 },
-  avatarRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  avatar: { width: 64, height: 64, borderRadius: 32 },
+  // ── Tab bar ───────────────────────────────────────────
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  tab: { flex: 1, paddingVertical: 13, alignItems: 'center' },
+  tabActive: { borderBottomWidth: 2, borderBottomColor: '#2D5016' },
+  tabText: { fontSize: 13, color: '#999' },
+  tabTextActive: { color: '#2D5016', fontWeight: '700' },
+
+  // ── Shared content padding ────────────────────────────
+  listContent: { padding: 16, paddingBottom: 32 },
+  loader: { marginTop: 60 },
+
+  // ── My Piehole — profile ──────────────────────────────
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 16,
+  },
+  avatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 2,
+    borderColor: '#f0ede8',
+  },
   avatarPlaceholder: {
     width: 64,
     height: 64,
@@ -203,73 +306,60 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarInitials: { fontSize: 24, fontWeight: '700', color: '#fff' },
-  nameBlock: { flex: 1, marginLeft: 14 },
-  displayName: { fontSize: 18, fontWeight: '700' },
-  username: { fontSize: 13, color: '#888', marginTop: 2 },
-  editButton: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+  avatarInitials: { fontSize: 22, fontWeight: '700', color: '#fff' },
+  profileInfo: { flex: 1, marginLeft: 14 },
+  displayName: { fontSize: 18, fontWeight: '700', color: '#1a1a1a' },
+  statsRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8, marginBottom: 4 },
+  statItem: { alignItems: 'center' },
+  statValue: { fontSize: 16, fontWeight: '700', color: '#2D5016' },
+  statLabel: { fontSize: 11, color: '#888', marginTop: 1 },
+  statDivider: { width: 1, height: 28, backgroundColor: '#e8e0d8', marginHorizontal: 12 },
+  memberSince: { fontSize: 12, color: '#888', marginTop: 3 },
+  bio: { fontSize: 14, color: '#666', marginTop: 4, lineHeight: 20 },
+
+  // ── My Piehole — account options ──────────────────────
+  accountSection: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    overflow: 'hidden',
   },
-  editButtonText: { fontSize: 13, fontWeight: '600', color: '#444' },
-  bio: { fontSize: 14, color: '#555', marginBottom: 14, lineHeight: 20 },
-  statsRow: { flexDirection: 'row', marginTop: 4 },
-  statGap: { width: 10 },
+  accountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+  },
+  accountRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  accountIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  accountRowText: { fontSize: 15, fontWeight: '500', color: '#1a1a1a' },
+  destructiveText: { color: '#c0392b' },
+  accountDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: '#ebebeb',
+    marginLeft: 62,
+  },
 
-  section: { paddingHorizontal: 16, marginBottom: 20 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { fontSize: 17, fontWeight: '700' },
+  // ── Badges ────────────────────────────────────────────
+  badgesHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  badgesCount: { fontSize: 13, color: '#888' },
   seeAll: { fontSize: 13, color: '#2D5016', fontWeight: '600' },
-
   badgeGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
 
-  allBadgesButton: {
-    marginTop: 8,
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  allBadgesText: { fontSize: 13, color: '#2D5016', fontWeight: '600' },
-
-  emptyCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 24,
-    alignItems: 'center',
-  },
-  emptyEmoji: { fontSize: 36, marginBottom: 8 },
-  emptyTitle: { fontSize: 15, fontWeight: '700', marginBottom: 4 },
-  emptyBody: { fontSize: 13, color: '#888', textAlign: 'center', lineHeight: 18 },
-
-  settingsIconButton: { marginLeft: 10, padding: 4 },
-
-  faqButton: {
-    marginHorizontal: 16,
-    marginTop: 8,
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  faqText: { fontSize: 15, color: '#2D5016', fontWeight: '600' },
-
-  signOutButton: {
-    marginHorizontal: 16,
-    marginTop: 8,
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  signOutText: { fontSize: 15, color: '#c00', fontWeight: '600' },
+  // ── Empty states ──────────────────────────────────────
+  emptyWrap: { alignItems: 'center', marginTop: 60 },
+  emptyEmoji: { fontSize: 40, marginBottom: 12 },
+  empty: { textAlign: 'center', color: '#aaa', fontSize: 14, marginTop: 8 },
+  emptySub: { fontSize: 13, color: '#bbb', marginTop: 4, textAlign: 'center' },
 });
