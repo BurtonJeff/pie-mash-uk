@@ -38,11 +38,12 @@ export default function AllVisitsScreen({ navigation }: Props) {
             shopName={item.shop_name}
             checkedInAt={item.checked_in_at}
             photoUrl={item.photo_url}
+            photoUrls={item.photo_urls}
             pointsEarned={item.points_earned}
             onEdit={() => navigation.navigate('EditCheckIn', {
               checkInId: item.id,
               shopName: item.shop_name,
-              initialPhotoUrl: item.photo_url ?? null,
+              initialPhotoUrls: item.photo_urls?.length ? item.photo_urls : (item.photo_url ? [item.photo_url] : []),
               initialNotes: item.notes ?? null,
             })}
           />

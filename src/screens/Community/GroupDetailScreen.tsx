@@ -38,12 +38,12 @@ function ChatBubble({ msg, isOwn }: { msg: GroupMessage; isOwn: boolean }) {
 }
 
 export default function GroupDetailScreen({ route, navigation }: Props) {
-  const { groupId, groupName, inviteCode, createdBy, requiresConfirmation: initialRequiresConfirmation } = route.params;
+  const { groupId, groupName, inviteCode, createdBy, requiresConfirmation: initialRequiresConfirmation, initialTab } = route.params;
   const [requiresConfirmation, setRequiresConfirmation] = useState(initialRequiresConfirmation ?? false);
   const { user } = useAuthStore();
   const userId = user?.id ?? '';
 
-  const [subTab, setSubTab] = useState<SubTab>('members');
+  const [subTab, setSubTab] = useState<SubTab>(initialTab ?? 'members');
   const [draft, setDraft] = useState('');
   const [selectedMember, setSelectedMember] = useState<GroupMember | null>(null);
   const [showProposeMeetup, setShowProposeMeetup] = useState(false);
@@ -77,15 +77,25 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   async function addMeetupToCalendar(meetup: import('../../lib/meetups').Meetup) {
     try {
       const { status } = await Calendar.requestCalendarPermissionsAsync();
-      if (status !== 'granted') return;
-      const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
-      const writable = calendars.find((c) => c.allowsModifications) ?? calendars[0];
-      if (!writable) return;
+      if (status !== 'granted') {
+        Alert.alert('Permission denied', 'Please allow calendar access in your device Settings to add meatups.');
+        return;
+      }
+      let calendarId: string;
+      if (Platform.OS === 'ios') {
+        const defaultCal = await Calendar.getDefaultCalendarAsync();
+        calendarId = defaultCal.id;
+      } else {
+        const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
+        const writable = calendars.find((c) => c.allowsModifications) ?? calendars[0];
+        if (!writable) { Alert.alert('No calendar found', 'Could not find a writable calendar on this device.'); return; }
+        calendarId = writable.id;
+      }
       const [y, mo, d] = meetup.meetupDate.split('-').map(Number);
       const [h, mi] = meetup.meetupTime.split(':').map(Number);
       const start = new Date(y, mo - 1, d, h, mi, 0);
       const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
-      await Calendar.createEventAsync(writable.id, {
+      await Calendar.createEventAsync(calendarId, {
         title: `Meatup at ${meetup.shopName}`,
         location: `${meetup.shopName}, ${meetup.shopCity}`,
         startDate: start,
@@ -93,8 +103,9 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
         notes: meetup.description ?? '',
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       });
-    } catch {
-      // Never block RSVP over a calendar error
+      Alert.alert('Added to calendar!', `The meatup at ${meetup.shopName} has been added to your calendar.`);
+    } catch (e: any) {
+      Alert.alert('Calendar error', e?.message ?? 'Could not add event to calendar.');
     }
   }
 

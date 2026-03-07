@@ -8,18 +8,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { HomeStackParamList } from '../../navigation/HomeNavigator';
 import { useAuthStore } from '../../store/authStore';
-import { useProfile } from '../../hooks/useProfile';
+import { useProfile, useUserBadges } from '../../hooks/useProfile';
 import { useFeaturedShop } from '../../hooks/useHome';
-import { useGlobalFeed, useUpcomingMeetups } from '../../hooks/useCommunity';
+import { useUpcomingMeetups } from '../../hooks/useCommunity';
 import { useQuery } from '@tanstack/react-query';
 import { fetchAppConfig } from '../../lib/content';
 import FeaturedShopCard from '../../components/home/FeaturedShopCard';
 import DailyFactCard from '../../components/home/DailyFactCard';
 import FeedbackModal from '../../components/home/FeedbackModal';
 import TipJarModal from '../../components/home/TipJarModal';
-import FeedItemComponent from '../../components/community/FeedItem';
 import UpcomingMeetupsCard from '../../components/home/UpcomingMeetupsCard';
 import { UpcomingMeetup } from '../../lib/meetups';
+import BadgeItem from '../../components/journey/BadgeItem';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'HomeMain'>;
 
@@ -31,15 +31,17 @@ export default function HomeScreen({ navigation }: Props) {
 
   const { data: profile } = useProfile(userId);
   const { data: featured, isLoading: featuredLoading } = useFeaturedShop();
-  const { data: feed = [] } = useGlobalFeed();
   const { data: upcomingMeetups = [] } = useUpcomingMeetups(userId);
+  const { data: userBadges = [] } = useUserBadges(userId);
   const { data: subtitle } = useQuery({
     queryKey: ['appConfig', 'home_subtitle'],
     queryFn: () => fetchAppConfig('home_subtitle'),
     staleTime: 1000 * 60 * 10,
   });
 
-  const recentFeed = feed.slice(0, 3);
+  const sortedBadges = [...userBadges].sort(
+    (a, b) => new Date(b.awarded_at).getTime() - new Date(a.awarded_at).getTime(),
+  );
 
   function handleMeetupPress(meetup: UpcomingMeetup) {
     navigation.getParent()?.navigate('Community', {
@@ -48,6 +50,7 @@ export default function HomeScreen({ navigation }: Props) {
         groupId: meetup.groupId,
         groupName: meetup.groupName,
         createdBy: meetup.groupCreatedBy,
+        initialTab: 'meetups',
       },
     });
   }
@@ -90,53 +93,59 @@ export default function HomeScreen({ navigation }: Props) {
         {/* Daily fact */}
         <DailyFactCard />
 
-        {/* Feedback */}
-        <TouchableOpacity
-          style={styles.feedbackButton}
-          onPress={() => setFeedbackVisible(true)}
-          activeOpacity={0.75}
-        >
-          <Ionicons name="chatbubble-ellipses-outline" size={18} color="#2D5016" />
-          <Text style={styles.feedbackButtonText}>Share Feedback</Text>
-          <Ionicons name="chevron-forward" size={16} color="#aaa" style={styles.feedbackChevron} />
-        </TouchableOpacity>
-
-        {/* Tip jar */}
-        <TouchableOpacity
-          style={styles.feedbackButton}
-          onPress={() => setTipJarVisible(true)}
-          activeOpacity={0.75}
-        >
-          <Ionicons name="heart-outline" size={18} color="#2D5016" />
-          <Text style={styles.feedbackButtonText}>Support the App</Text>
-          <Ionicons name="chevron-forward" size={16} color="#aaa" style={styles.feedbackChevron} />
-        </TouchableOpacity>
-
         {/* Upcoming meatups */}
         <UpcomingMeetupsCard meetups={upcomingMeetups} onPress={handleMeetupPress} />
 
-        {/* Recent community activity */}
-        {recentFeed.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Recent Activity</Text>
-            <View style={styles.feedCard}>
-              {recentFeed.map((item) => (
-                <FeedItemComponent
-                  key={item.id}
-                  item={item}
-                  onEdit={item.userId === userId ? () => {
-                    navigation.navigate('EditCheckIn', {
-                      checkInId: item.id,
-                      shopName: item.shopName,
-                      initialPhotoUrl: item.photoUrl,
-                      initialNotes: item.notes,
-                    });
-                  } : undefined}
+        {/* Earned badges */}
+        {sortedBadges.length > 0 && (
+          <View style={[styles.section, styles.badgesSection]}>
+            <Text style={styles.sectionTitle}>Your Badges</Text>
+            <View style={styles.badgeGrid}>
+              {sortedBadges.map((ub) => (
+                <BadgeItem
+                  key={ub.badge.id}
+                  badge={ub.badge}
+                  earned
+                  awardedAt={ub.awarded_at}
+                  profile={profile}
                 />
               ))}
             </View>
           </View>
         )}
+
+        {/* Bottom buttons */}
+        <View style={styles.bottomButtons}>
+          <TouchableOpacity
+            style={styles.feedbackButton}
+            onPress={() => setFeedbackVisible(true)}
+            activeOpacity={0.75}
+          >
+            <Ionicons name="chatbubble-ellipses-outline" size={18} color="#2D5016" />
+            <Text style={styles.feedbackButtonText}>Share Feedback</Text>
+            <Ionicons name="chevron-forward" size={16} color="#aaa" style={styles.feedbackChevron} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.feedbackButton}
+            onPress={() => setTipJarVisible(true)}
+            activeOpacity={0.75}
+          >
+            <Ionicons name="heart-outline" size={18} color="#2D5016" />
+            <Text style={styles.feedbackButtonText}>Support the App</Text>
+            <Ionicons name="chevron-forward" size={16} color="#aaa" style={styles.feedbackChevron} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.feedbackButton}
+            onPress={() => navigation.navigate('FAQ')}
+            activeOpacity={0.75}
+          >
+            <Ionicons name="help-circle-outline" size={18} color="#2D5016" />
+            <Text style={styles.feedbackButtonText}>Help & FAQ</Text>
+            <Ionicons name="chevron-forward" size={16} color="#aaa" style={styles.feedbackChevron} />
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       <FeedbackModal
@@ -203,7 +212,13 @@ const styles = StyleSheet.create({
 
   loader: { marginTop: 20 },
   empty: { fontSize: 14, color: '#aaa', textAlign: 'center', marginTop: 12 },
+  badgesSection: { marginBottom: 12 },
+  badgeGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
 
+  bottomButtons: {
+    gap: 10,
+    marginBottom: 28,
+  },
   feedbackButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -211,7 +226,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 16,
-    marginBottom: 28,
     gap: 10,
     shadowColor: '#000',
     shadowOpacity: 0.05,

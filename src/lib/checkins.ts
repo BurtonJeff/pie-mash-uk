@@ -7,7 +7,7 @@ export interface SubmitCheckInParams {
   shopId: string;
   latitude: number;
   longitude: number;
-  photoUri?: string | null;
+  photoUris?: string[];
   notes?: string;
   isFeatured?: boolean;
 }
@@ -53,7 +53,7 @@ async function fetchBadgesByIds(ids: string[]): Promise<Badge[]> {
 }
 
 export async function submitCheckIn(params: SubmitCheckInParams): Promise<CheckInResult> {
-  const { userId, shopId, latitude, longitude, photoUri, notes, isFeatured } = params;
+  const { userId, shopId, latitude, longitude, photoUris, notes, isFeatured } = params;
 
   // Reject if the user has already checked in here today
   const dayStart = new Date();
@@ -71,13 +71,17 @@ export async function submitCheckIn(params: SubmitCheckInParams): Promise<CheckI
   // Snapshot badges before check-in so we can diff afterwards
   const beforeBadges = await getEarnedBadgeIds(userId);
 
-  // Upload photo if provided
-  let photoUrl: string | null = null;
-  if (photoUri) {
-    const path = await uploadCheckinPhoto(userId, photoUri);
-    const { data } = supabase.storage.from('checkin-photos').getPublicUrl(path);
-    photoUrl = data.publicUrl;
+  // Upload all photos in parallel
+  const photoUrls: string[] = [];
+  if (photoUris && photoUris.length > 0) {
+    const uploadedPaths = await Promise.all(photoUris.map((uri) => uploadCheckinPhoto(userId, uri)));
+    for (const path of uploadedPaths) {
+      const { data } = supabase.storage.from('checkin-photos').getPublicUrl(path);
+      photoUrls.push(data.publicUrl);
+    }
   }
+
+  const photoUrl = photoUrls[0] ?? null;
 
   // Insert check-in record
   const { data: checkin, error } = await supabase
@@ -88,6 +92,7 @@ export async function submitCheckIn(params: SubmitCheckInParams): Promise<CheckI
       latitude,
       longitude,
       photo_url: photoUrl,
+      photo_urls: photoUrls,
       notes: notes ?? null,
     })
     .select()
@@ -194,26 +199,32 @@ export async function submitCheckIn(params: SubmitCheckInParams): Promise<CheckI
 export interface UpdateCheckInParams {
   checkInId: string;
   userId: string;
-  /** Local file URI of a new photo to upload, if the user picked one. */
-  newPhotoUri?: string;
-  /** The desired final photo_url — the existing URL to keep, or null to clear. */
-  photoUrl: string | null;
+  /** Local file URIs of newly picked photos to upload. */
+  newPhotoUris?: string[];
+  /** Existing remote URLs to keep (user may have removed some). */
+  existingPhotoUrls: string[];
   notes: string;
 }
 
 export async function updateCheckIn(params: UpdateCheckInParams): Promise<void> {
-  const { checkInId, userId, newPhotoUri, notes } = params;
-  let photoUrl = params.photoUrl;
+  const { checkInId, userId, newPhotoUris = [], existingPhotoUrls, notes } = params;
 
-  if (newPhotoUri) {
-    const path = await uploadCheckinPhoto(userId, newPhotoUri);
-    const { data } = supabase.storage.from('checkin-photos').getPublicUrl(path);
-    photoUrl = data.publicUrl;
+  // Upload any new photos
+  const newUrls: string[] = [];
+  if (newPhotoUris.length > 0) {
+    const uploadedPaths = await Promise.all(newPhotoUris.map((uri) => uploadCheckinPhoto(userId, uri)));
+    for (const path of uploadedPaths) {
+      const { data } = supabase.storage.from('checkin-photos').getPublicUrl(path);
+      newUrls.push(data.publicUrl);
+    }
   }
+
+  const photoUrls = [...existingPhotoUrls, ...newUrls];
+  const photoUrl = photoUrls[0] ?? null;
 
   const { error } = await supabase
     .from('checkins')
-    .update({ photo_url: photoUrl, notes: notes.trim() || null })
+    .update({ photo_url: photoUrl, photo_urls: photoUrls, notes: notes.trim() || null })
     .eq('id', checkInId);
 
   if (error) throw error;

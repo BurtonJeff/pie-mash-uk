@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { useShops } from '../../hooks/useShops';
 import { useSubmitCheckIn } from '../../hooks/useCheckin';
 import { useAuthStore } from '../../store/authStore';
@@ -26,6 +27,7 @@ import BadgeCelebration from '../../components/checkin/BadgeCelebration';
 import { CheckInResult } from '../../lib/checkins';
 
 const CHECK_IN_RADIUS_M = 200;
+const MAX_PHOTOS = 5;
 
 type Step = 'idle' | 'confirming' | 'photo' | 'note' | 'submitting' | 'success';
 
@@ -44,7 +46,7 @@ export default function CheckInScreen() {
   const [locationError, setLocationError] = useState(false);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<ShopWithPhoto | null>(null);
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [photoUris, setPhotoUris] = useState<string[]>([]);
   const [note, setNote] = useState('');
   const [result, setResult] = useState<CheckInResult | null>(null);
 
@@ -100,7 +102,7 @@ export default function CheckInScreen() {
       aspect: [4, 3],
       quality: 0.7,
     });
-    if (!result.canceled) setPhotoUri(result.assets[0].uri);
+    if (!result.canceled) setPhotoUris((prev) => [...prev, result.assets[0].uri]);
   }
 
   async function takePhoto() {
@@ -114,7 +116,7 @@ export default function CheckInScreen() {
       aspect: [4, 3],
       quality: 0.7,
     });
-    if (!result.canceled) setPhotoUri(result.assets[0].uri);
+    if (!result.canceled) setPhotoUris((prev) => [...prev, result.assets[0].uri]);
   }
 
   async function submit() {
@@ -126,7 +128,7 @@ export default function CheckInScreen() {
         shopId: selected.id,
         latitude: userLocation.latitude,
         longitude: userLocation.longitude,
-        photoUri,
+        photoUris: photoUris.length > 0 ? photoUris : undefined,
         notes: note.trim() || undefined,
         isFeatured: selected.is_featured,
       });
@@ -141,7 +143,7 @@ export default function CheckInScreen() {
   function reset() {
     setStep('idle');
     setSelected(null);
-    setPhotoUri(null);
+    setPhotoUris([]);
     setNote('');
     setResult(null);
     setSearch('');
@@ -156,12 +158,16 @@ export default function CheckInScreen() {
   // ── Success ────────────────────────────────────────────────
   if (step === 'success' && result && selected) {
     async function handleShare() {
-      const message = `I just checked in at ${selected!.name} on Pie & Mash UK! 🥧 +${result!.pointsEarned} points earned.`;
-      const photoUrl = result!.checkin.photo_url;
+      const parts: string[] = [];
+      if (note.trim()) parts.push(note.trim());
+      parts.push(`Checked in at ${selected!.name} on Pie & Mash UK! 🥧 +${result!.pointsEarned} points earned.`);
+      parts.push('#PieAndMashUK');
+      const message = parts.join('\n\n');
+      const firstPhotoUrl = result!.checkin.photo_urls?.[0] ?? result!.checkin.photo_url ?? null;
       try {
         await Share.share(
-          photoUrl
-            ? { message: `${message}\n${photoUrl}`, url: photoUrl }
+          firstPhotoUrl
+            ? { message, url: firstPhotoUrl }
             : { message },
         );
       } catch {
@@ -241,15 +247,25 @@ export default function CheckInScreen() {
             </View>
 
             {/* Photo section */}
-            <Text style={styles.sectionLabel}>Photo <Text style={styles.optional}>(optional)</Text></Text>
-            {photoUri ? (
-              <View style={styles.photoPreviewWrap}>
-                <Image source={{ uri: photoUri }} style={styles.photoPreview} />
-                <TouchableOpacity style={styles.removePhoto} onPress={() => setPhotoUri(null)}>
-                  <Text style={styles.removePhotoText}>✕ Remove</Text>
-                </TouchableOpacity>
+            <Text style={styles.sectionLabel}>
+              Photos <Text style={styles.optional}>(optional · up to {MAX_PHOTOS})</Text>
+            </Text>
+            {photoUris.length > 0 && (
+              <View style={styles.photoGrid}>
+                {photoUris.map((uri) => (
+                  <View key={uri} style={styles.photoThumbWrap}>
+                    <Image source={{ uri }} style={styles.photoThumb} />
+                    <TouchableOpacity
+                      style={styles.removeThumbBtn}
+                      onPress={() => setPhotoUris((prev) => prev.filter((u) => u !== uri))}
+                    >
+                      <Ionicons name="close-circle" size={22} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
               </View>
-            ) : (
+            )}
+            {photoUris.length < MAX_PHOTOS && (
               <View style={styles.photoButtons}>
                 <TouchableOpacity style={styles.photoButton} onPress={takePhoto}>
                   <Text style={styles.photoButtonText}>Take photo</Text>
@@ -470,6 +486,13 @@ const styles = StyleSheet.create({
   sectionLabel: { fontSize: 14, fontWeight: '700', color: '#444', marginBottom: 10 },
   optional: { fontWeight: '400', color: '#999' },
 
+  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
+  photoThumbWrap: { position: 'relative' },
+  photoThumb: { width: 100, height: 100, borderRadius: 8 },
+  removeThumbBtn: {
+    position: 'absolute', top: 4, right: 4,
+    backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 11,
+  },
   photoButtons: { flexDirection: 'row', gap: 10, marginBottom: 24 },
   photoButton: {
     flex: 1,
@@ -482,10 +505,6 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
   },
   photoButtonText: { fontSize: 14, color: '#555' },
-  photoPreviewWrap: { marginBottom: 24 },
-  photoPreview: { width: '100%', height: 200, borderRadius: 10 },
-  removePhoto: { marginTop: 8, alignSelf: 'flex-end' },
-  removePhotoText: { fontSize: 13, color: '#c00' },
 
   noteInput: {
     backgroundColor: '#fff',

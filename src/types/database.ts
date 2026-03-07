@@ -47,6 +47,7 @@ export interface CheckIn {
   latitude: number;
   longitude: number;
   photo_url: string | null;
+  photo_urls: string[];
   notes: string | null;
   points_earned: number;
 }

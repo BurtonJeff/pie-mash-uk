@@ -40,12 +40,15 @@ export default function App() {
       <NavigationContainer
         ref={navigationRef}
         onReady={async () => {
-          // Handle the notification that launched the app from a cold start.
-          const initial = await Notifications.getLastNotificationResponseAsync();
-          if (initial) {
-            handleNotificationNavigation(
-              initial.notification.request.content.data as Record<string, unknown>,
-            );
+          try {
+            const initial = await Notifications.getLastNotificationResponseAsync();
+            if (initial) {
+              handleNotificationNavigation(
+                initial.notification.request.content.data as Record<string, unknown>,
+              );
+            }
+          } catch {
+            // Notification handling failure should never crash the app
           }
         }}
       >

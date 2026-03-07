@@ -7,7 +7,7 @@ import JoinGroupScreen from '../screens/Community/JoinGroupScreen';
 
 export type CommunityStackParamList = {
   CommunityHome: undefined;
-  GroupDetail: { groupId: string; groupName: string; inviteCode?: string; createdBy: string; requiresConfirmation?: boolean };
+  GroupDetail: { groupId: string; groupName: string; inviteCode?: string; createdBy: string; requiresConfirmation?: boolean; initialTab?: 'chat' | 'meetups' | 'leaderboard' | 'members' };
   CreateGroup: undefined;
   JoinGroup: undefined;
 };

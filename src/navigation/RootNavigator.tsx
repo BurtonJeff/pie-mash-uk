@@ -33,19 +33,23 @@ export default function RootNavigator() {
       setIsAdmin(false);
       return;
     }
-    supabase
-      .from('profiles')
-      .select('is_admin, is_active')
-      .eq('id', user.id)
-      .single()
-      .then(({ data }) => {
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('is_admin, is_active')
+          .eq('id', user.id)
+          .single();
         if (data?.is_active === false) {
           supabase.auth.signOut();
           setIsAdmin(false);
         } else {
           setIsAdmin(data?.is_admin ?? false);
         }
-      });
+      } catch {
+        setIsAdmin(false);
+      }
+    })();
   }, [initialized, user?.id]);
 
   // Wait until auth, AsyncStorage, and admin check are all resolved

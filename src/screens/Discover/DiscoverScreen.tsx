@@ -14,7 +14,7 @@ import * as Location from 'expo-location';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useShops } from '../../hooks/useShops';
 import ShopCard from '../../components/shop/ShopCard';
-import { distanceKm } from '../../utils/shopUtils';
+import { distanceKm, isOpenNow, OpeningHours } from '../../utils/shopUtils';
 import { ShopWithPhoto } from '../../lib/shops';
 import { DiscoverStackParamList } from '../../navigation/DiscoverNavigator';
 
@@ -34,6 +34,7 @@ export default function DiscoverScreen({ navigation }: Props) {
   const { data: shops = [], isLoading, error } = useShops();
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [sortMode, setSortMode] = useState<SortMode>('nearest');
+  const [hideClosedMode, setHideClosedMode] = useState(false);
   const [search, setSearch] = useState('');
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
@@ -64,6 +65,10 @@ export default function DiscoverScreen({ navigation }: Props) {
       );
     }
 
+    if (hideClosedMode) {
+      result = result.filter((s) => isOpenNow(s.opening_hours as unknown as OpeningHours));
+    }
+
     if (sortMode === 'nearest' && userLocation) {
       return [...result].sort(
         (a, b) =>
@@ -79,7 +84,7 @@ export default function DiscoverScreen({ navigation }: Props) {
     }
 
     return result;
-  }, [shops, search, userLocation, sortMode]);
+  }, [shops, search, userLocation, sortMode, hideClosedMode]);
 
   function getDistance(shop: ShopWithPhoto) {
     if (!userLocation) return undefined;
@@ -115,19 +120,20 @@ export default function DiscoverScreen({ navigation }: Props) {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.sortChip, sortMode === 'az' && styles.sortChipActive]}
-          onPress={() => setSortMode('az')}
+          style={[styles.sortChip, (sortMode === 'az' || sortMode === 'za') && styles.sortChipActive]}
+          onPress={() => setSortMode(sortMode === 'az' ? 'za' : 'az')}
         >
-          <Text style={[styles.sortChipText, sortMode === 'az' && styles.sortChipTextActive]}>
-            A – Z
+          <Text style={[styles.sortChipText, (sortMode === 'az' || sortMode === 'za') && styles.sortChipTextActive]}>
+            {sortMode === 'az' ? 'Z – A' : 'A – Z'}
           </Text>
         </TouchableOpacity>
+
         <TouchableOpacity
-          style={[styles.sortChip, sortMode === 'za' && styles.sortChipActive]}
-          onPress={() => setSortMode('za')}
+          style={[styles.sortChip, hideClosedMode && styles.sortChipActive]}
+          onPress={() => setHideClosedMode((v) => !v)}
         >
-          <Text style={[styles.sortChipText, sortMode === 'za' && styles.sortChipTextActive]}>
-            Z – A
+          <Text style={[styles.sortChipText, hideClosedMode && styles.sortChipTextActive]}>
+            Open now
           </Text>
         </TouchableOpacity>
 

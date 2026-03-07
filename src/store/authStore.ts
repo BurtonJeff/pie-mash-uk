@@ -20,6 +20,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 export function initAuthListener() {
   supabase.auth.getSession().then(({ data: { session } }) => {
     useAuthStore.getState().setSession(session);
+  }).catch(() => {
+    // If getSession fails (e.g. network error), mark as initialized with no session
+    useAuthStore.getState().setSession(null);
   });
 
   supabase.auth.onAuthStateChange(async (event, session) => {

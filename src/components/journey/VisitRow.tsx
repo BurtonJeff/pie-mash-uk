@@ -6,19 +6,29 @@ interface Props {
   shopName: string;
   checkedInAt: string;
   photoUrl?: string | null;
+  photoUrls?: string[];
   pointsEarned: number;
   onEdit?: () => void;
 }
 
-export default function VisitRow({ shopName, checkedInAt, photoUrl, pointsEarned, onEdit }: Props) {
+export default function VisitRow({ shopName, checkedInAt, photoUrl, photoUrls, pointsEarned, onEdit }: Props) {
   const date = new Date(checkedInAt);
   const dateStr = date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
   const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const firstPhoto = (photoUrls && photoUrls.length > 0) ? photoUrls[0] : photoUrl;
+  const extraCount = photoUrls && photoUrls.length > 1 ? photoUrls.length - 1 : 0;
 
   return (
     <View style={styles.row}>
-      {photoUrl ? (
-        <Image source={{ uri: photoUrl }} style={styles.photo} />
+      {firstPhoto ? (
+        <View style={styles.photoWrap}>
+          <Image source={{ uri: firstPhoto }} style={styles.photo} />
+          {extraCount > 0 && (
+            <View style={styles.extraBadge}>
+              <Text style={styles.extraBadgeText}>+{extraCount}</Text>
+            </View>
+          )}
+        </View>
       ) : (
         <View style={[styles.photo, styles.photoPlaceholder]}>
           <Text style={styles.photoPlaceholderText}>🥧</Text>
@@ -56,9 +66,16 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 1,
   },
+  photoWrap: { position: 'relative' },
   photo: { width: 60, height: 60 },
   photoPlaceholder: { backgroundColor: '#f0ede8', alignItems: 'center', justifyContent: 'center' },
   photoPlaceholderText: { fontSize: 22 },
+  extraBadge: {
+    position: 'absolute', bottom: 4, right: 4,
+    backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 6,
+    paddingHorizontal: 4, paddingVertical: 1,
+  },
+  extraBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
   info: { flex: 1, paddingHorizontal: 12 },
   shopName: { fontSize: 14, fontWeight: '600' },
   datetime: { fontSize: 12, color: '#888', marginTop: 2 },

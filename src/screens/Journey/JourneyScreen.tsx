@@ -33,7 +33,7 @@ function Initials({ name }: { name: string }) {
 const TABS: { key: Tab; label: string }[] = [
   { key: 'piehole', label: 'My Piehole' },
   { key: 'badges', label: 'Badges' },
-  { key: 'visits', label: 'Visit History' },
+  { key: 'visits', label: 'Check-Ins' },
 ];
 
 export default function JourneyScreen({ navigation }: Props) {
@@ -127,14 +127,6 @@ export default function JourneyScreen({ navigation }: Props) {
             />
             <AccountDivider />
             <AccountRow
-              icon="help-circle-outline"
-              iconBg="#eef2ea"
-              iconColor="#2D5016"
-              label="Help & FAQ"
-              onPress={() => navigation.navigate('FAQ')}
-            />
-            <AccountDivider />
-            <AccountRow
               icon="settings-outline"
               iconBg="#f0f0f0"
               iconColor="#555"
@@ -204,11 +196,12 @@ export default function JourneyScreen({ navigation }: Props) {
               shopName={item.shop_name}
               checkedInAt={item.checked_in_at}
               photoUrl={item.photo_url}
+              photoUrls={item.photo_urls}
               pointsEarned={item.points_earned}
               onEdit={() => navigation.navigate('EditCheckIn', {
                 checkInId: item.id,
                 shopName: item.shop_name,
-                initialPhotoUrl: item.photo_url ?? null,
+                initialPhotoUrls: item.photo_urls?.length ? item.photo_urls : (item.photo_url ? [item.photo_url] : []),
                 initialNotes: item.notes ?? null,
               })}
             />

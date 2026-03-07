@@ -21,7 +21,7 @@ export type JourneyStackParamList = {
   EditCheckIn: {
     checkInId: string;
     shopName: string;
-    initialPhotoUrl: string | null;
+    initialPhotoUrls: string[];
     initialNotes: string | null;
   };
   Admin: undefined;
@@ -37,7 +37,7 @@ export default function JourneyNavigator() {
       <Stack.Screen name="AllVisits" component={AllVisitsScreen} options={{ title: 'Visit History' }} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit Profile' }} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
-      <Stack.Screen name="FAQ" component={FAQScreen} options={{ title: 'FAQ' }} />
+      <Stack.Screen name="FAQ" component={FAQScreen} options={{ title: 'Help & FAQ' }} />
       <Stack.Screen name="EditCheckIn" component={EditCheckInScreen} options={{ title: 'Edit Check-in' }} />
       <Stack.Screen
         name="LegalContent"

@@ -14,8 +14,11 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.piemashanduk.app",
-      "usesAppleSignIn": true
+      "bundleIdentifier": "uk.org.pml.app",
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.piemashanduk.app",
@@ -28,7 +31,13 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundColor": "#2D5016"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -50,6 +59,12 @@
           "remindersPermission": false
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "4617c1e4-b369-4f14-88d1-8e11029a2d4c"
+      }
+    },
+    "owner": "jeffburton"
   }
 }

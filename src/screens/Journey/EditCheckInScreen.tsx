@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { JourneyStackParamList } from '../../navigation/JourneyNavigator';
 import { useAuthStore } from '../../store/authStore';
@@ -13,22 +14,31 @@ import { useUpdateCheckIn } from '../../hooks/useCheckin';
 
 type Props = NativeStackScreenProps<JourneyStackParamList, 'EditCheckIn'>;
 
+const MAX_PHOTOS = 5;
+
 export default function EditCheckInScreen({ navigation, route }: Props) {
-  const { checkInId, shopName, initialPhotoUrl, initialNotes } = route.params;
+  const { checkInId, shopName, initialPhotoUrls, initialNotes } = route.params;
   const { user } = useAuthStore();
   const mutation = useUpdateCheckIn(user?.id ?? '');
 
-  const [newPhotoUri, setNewPhotoUri] = useState<string | null>(null);
-  const [photoUrl, setPhotoUrl] = useState<string | null>(initialPhotoUrl ?? null);
+  // Existing remote URLs (user can remove these)
+  const [existingPhotoUrls, setExistingPhotoUrls] = useState<string[]>(initialPhotoUrls);
+  // Newly picked local URIs (to upload on save)
+  const [newPhotoUris, setNewPhotoUris] = useState<string[]>([]);
   const [notes, setNotes] = useState(initialNotes ?? '');
 
-  // Displayed photo: prefer a newly picked local URI, else the stored URL
-  const displayPhoto = newPhotoUri ?? photoUrl;
+  const totalPhotos = existingPhotoUrls.length + newPhotoUris.length;
+  const canAddMore = totalPhotos < MAX_PHOTOS;
+
+  const hasUnsavedChanges =
+    notes !== (initialNotes ?? '') ||
+    newPhotoUris.length > 0 ||
+    existingPhotoUrls.length !== initialPhotoUrls.length;
 
   async function pickPhoto() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Allow photo access to change the photo.');
+      Alert.alert('Permission needed', 'Allow photo access to add photos.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -38,8 +48,7 @@ export default function EditCheckInScreen({ navigation, route }: Props) {
       quality: 0.7,
     });
     if (!result.canceled) {
-      setNewPhotoUri(result.assets[0].uri);
-      setPhotoUrl(null);
+      setNewPhotoUris((prev) => [...prev, result.assets[0].uri]);
     }
   }
 
@@ -55,36 +64,56 @@ export default function EditCheckInScreen({ navigation, route }: Props) {
       quality: 0.7,
     });
     if (!result.canceled) {
-      setNewPhotoUri(result.assets[0].uri);
-      setPhotoUrl(null);
+      setNewPhotoUris((prev) => [...prev, result.assets[0].uri]);
     }
   }
 
-  function removePhoto() {
-    setNewPhotoUri(null);
-    setPhotoUrl(null);
+  function removeExisting(url: string) {
+    setExistingPhotoUrls((prev) => prev.filter((u) => u !== url));
   }
 
-  async function handleShare() {
-    const parts: string[] = [`Just visited ${shopName} for some pie & mash!`];
+  function removeNew(uri: string) {
+    setNewPhotoUris((prev) => prev.filter((u) => u !== uri));
+  }
+
+  async function doShare() {
+    const parts: string[] = [];
     if (notes.trim()) parts.push(notes.trim());
+    parts.push(`Just visited ${shopName} for some pie & mash!`);
     parts.push('#PieAndMashUK');
     const message = parts.join('\n\n');
+    const firstPhoto = existingPhotoUrls[0] ?? null;
     try {
       const shareOptions: Parameters<typeof Share.share>[0] = { message };
-      if (displayPhoto) shareOptions.url = displayPhoto;
+      if (firstPhoto) shareOptions.url = firstPhoto;
       await Share.share(shareOptions);
     } catch {
       // user cancelled or share not supported — no action needed
     }
   }
 
-  function save() {
+  function handleShare() {
+    if (hasUnsavedChanges) {
+      Alert.alert(
+        'Unsaved changes',
+        'You have unsaved changes. Save before sharing?',
+        [
+          { text: 'Share anyway', onPress: doShare },
+          { text: 'Save first', style: 'default', onPress: () => save(doShare) },
+          { text: 'Cancel', style: 'cancel' },
+        ],
+      );
+    } else {
+      doShare();
+    }
+  }
+
+  function save(onSuccess?: () => void) {
     if (!user) return;
     mutation.mutate(
-      { checkInId, userId: user.id, newPhotoUri: newPhotoUri ?? undefined, photoUrl, notes },
+      { checkInId, userId: user.id, newPhotoUris, existingPhotoUrls, notes },
       {
-        onSuccess: () => navigation.goBack(),
+        onSuccess: onSuccess ?? (() => navigation.goBack()),
         onError: (e: any) => Alert.alert('Error', e.message ?? 'Could not save changes.'),
       },
     );
@@ -97,15 +126,34 @@ export default function EditCheckInScreen({ navigation, route }: Props) {
 
           <Text style={styles.shopName}>{shopName}</Text>
 
-          <Text style={styles.sectionLabel}>Photo <Text style={styles.optional}>(optional)</Text></Text>
-          {displayPhoto ? (
-            <View style={styles.photoPreviewWrap}>
-              <Image source={{ uri: displayPhoto }} style={styles.photoPreview} />
-              <TouchableOpacity style={styles.removePhoto} onPress={removePhoto}>
-                <Text style={styles.removePhotoText}>✕ Remove</Text>
-              </TouchableOpacity>
+          <Text style={styles.sectionLabel}>
+            Photos <Text style={styles.optional}>(optional · up to {MAX_PHOTOS})</Text>
+          </Text>
+
+          {/* Photo grid */}
+          {totalPhotos > 0 && (
+            <View style={styles.photoGrid}>
+              {existingPhotoUrls.map((url) => (
+                <View key={url} style={styles.photoThumbWrap}>
+                  <Image source={{ uri: url }} style={styles.photoThumb} />
+                  <TouchableOpacity style={styles.removeBtn} onPress={() => removeExisting(url)}>
+                    <Ionicons name="close-circle" size={22} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {newPhotoUris.map((uri) => (
+                <View key={uri} style={styles.photoThumbWrap}>
+                  <Image source={{ uri }} style={styles.photoThumb} />
+                  <TouchableOpacity style={styles.removeBtn} onPress={() => removeNew(uri)}>
+                    <Ionicons name="close-circle" size={22} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              ))}
             </View>
-          ) : (
+          )}
+
+          {/* Add photo buttons */}
+          {canAddMore && (
             <View style={styles.photoButtons}>
               <TouchableOpacity style={styles.photoButton} onPress={takePhoto}>
                 <Text style={styles.photoButtonText}>Take photo</Text>
@@ -130,7 +178,7 @@ export default function EditCheckInScreen({ navigation, route }: Props) {
 
           <TouchableOpacity
             style={[styles.saveButton, mutation.isPending && styles.saveButtonDisabled]}
-            onPress={save}
+            onPress={() => save()}
             disabled={mutation.isPending}
           >
             {mutation.isPending ? (
@@ -172,16 +220,28 @@ const styles = StyleSheet.create({
   sectionLabel: { fontSize: 14, fontWeight: '700', color: '#444', marginBottom: 10 },
   optional: { fontWeight: '400', color: '#999' },
 
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
+  },
+  photoThumbWrap: { position: 'relative' },
+  photoThumb: { width: 100, height: 100, borderRadius: 8 },
+  removeBtn: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 11,
+  },
+
   photoButtons: { flexDirection: 'row', gap: 10, marginBottom: 24 },
   photoButton: {
     flex: 1, backgroundColor: '#fff', borderRadius: 10, padding: 14,
     alignItems: 'center', borderWidth: 1, borderColor: '#ddd', borderStyle: 'dashed',
   },
   photoButtonText: { fontSize: 14, color: '#555' },
-  photoPreviewWrap: { marginBottom: 24 },
-  photoPreview: { width: '100%', height: 200, borderRadius: 10 },
-  removePhoto: { marginTop: 8, alignSelf: 'flex-end' },
-  removePhotoText: { fontSize: 13, color: '#c00' },
 
   noteInput: {
     backgroundColor: '#fff', borderRadius: 10, borderWidth: 1,
