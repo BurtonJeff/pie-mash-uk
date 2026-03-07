@@ -35,11 +35,15 @@ export default function RootNavigator() {
     }
     (async () => {
       try {
-        const { data } = await supabase
+        const timeout = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('timeout')), 5000)
+        );
+        const query = supabase
           .from('profiles')
           .select('is_admin, is_active')
           .eq('id', user.id)
           .single();
+        const { data } = await Promise.race([query, timeout]) as Awaited<typeof query>;
         if (data?.is_active === false) {
           supabase.auth.signOut();
           setIsAdmin(false);
