@@ -19,8 +19,16 @@ export default function JoinGroupScreen({ navigation }: Props) {
   async function submit() {
     if (code.trim().length < 4) return;
     try {
-      const group = await mutation.mutateAsync(code.trim());
-      navigation.replace('GroupDetail', { groupId: group.id, groupName: group.name });
+      const { group, pendingApproval } = await mutation.mutateAsync(code.trim());
+      if (pendingApproval) {
+        Alert.alert(
+          'Request sent!',
+          `Your request to join ${group.name} has been sent. An admin will review it shortly.`,
+          [{ text: 'OK', onPress: () => navigation.goBack() }],
+        );
+      } else {
+        navigation.replace('GroupDetail', { groupId: group.id, groupName: group.name, createdBy: group.createdBy });
+      }
     } catch (e: any) {
       Alert.alert('Could not join group', e.message);
     }

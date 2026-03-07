@@ -42,6 +42,13 @@
         {
           "faceIDPermission": "Pie & Mash uses Face ID to sign you in quickly and securely."
         }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Pie & Mash needs calendar access to add meatup events.",
+          "remindersPermission": false
+        }
       ]
     ]
   }

@@ -164,6 +164,69 @@ export async function uploadOnboardingImage(uri: string): Promise<string> {
   return data.publicUrl;
 }
 
+// ── Social Links ──────────────────────────────────────────────────────────────
+
+export interface SocialLink {
+  id: string;
+  label: string;
+  url: string;
+  icon_name: string;
+  icon_color: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export async function fetchActiveSocialLinks(): Promise<SocialLink[]> {
+  const { data, error } = await supabase
+    .from('social_links')
+    .select('*')
+    .eq('is_active', true)
+    .order('sort_order');
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function fetchAllSocialLinks(): Promise<SocialLink[]> {
+  const { data, error } = await supabase
+    .from('social_links')
+    .select('*')
+    .order('sort_order');
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function upsertSocialLink(
+  payload: Omit<SocialLink, 'created_at'> | Omit<SocialLink, 'id' | 'created_at'>,
+): Promise<void> {
+  const { error } = await supabase.from('social_links').upsert(payload);
+  if (error) throw error;
+}
+
+export async function deleteSocialLink(id: string): Promise<void> {
+  const { error } = await supabase.from('social_links').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ── App Config ────────────────────────────────────────────────────────────────
+
+export async function fetchAppConfig(key: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('app_config')
+    .select('value')
+    .eq('key', key)
+    .single();
+  if (error) return null;
+  return data?.value ?? null;
+}
+
+export async function setAppConfig(key: string, value: string): Promise<void> {
+  const { error } = await supabase
+    .from('app_config')
+    .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+  if (error) throw error;
+}
+
 export async function saveLegalContent(
   type: 'privacy_policy' | 'terms_of_service',
   content: string,

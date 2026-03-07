@@ -14,6 +14,7 @@ export interface Shop {
   longitude: number;
   phone: string | null;
   website: string | null;
+  facebook_url: string | null;
   email: string | null;
   founded_year: number | null;
   opening_hours: Record<string, unknown>;

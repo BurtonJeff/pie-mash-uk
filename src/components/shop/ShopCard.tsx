@@ -29,9 +29,9 @@ export default function ShopCard({ shop, distanceKm, onPress }: Props) {
         <Text style={styles.city} numberOfLines={1}>{shop.city}  ·  {shop.postcode}</Text>
 
         <View style={styles.row}>
-          {open !== null && (
-            <View style={[styles.badge, open ? styles.badgeOpen : styles.badgeClosed]}>
-              <Text style={styles.badgeText}>{open ? 'Open now' : 'Closed'}</Text>
+          {open === true && (
+            <View style={styles.badgeOpen}>
+              <Text style={styles.badgeText}>Open now</Text>
             </View>
           )}
           {distanceKm !== undefined && (

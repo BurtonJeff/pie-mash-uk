@@ -24,6 +24,9 @@ import {
   deleteShopPhoto,
   setShopPhotoPrimary,
   fetchAdminFeedback,
+  deleteFeedback,
+  fetchAdminUsers,
+  setUserActive,
 } from '../lib/admin';
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
@@ -249,6 +252,35 @@ export function useAdminFeedback() {
     queryKey: ['adminFeedback'],
     queryFn: () => fetchAdminFeedback(),
     staleTime: 0,
+  });
+}
+
+export function useAdminUsers() {
+  return useQuery({
+    queryKey: ['adminUsers'],
+    queryFn: () => fetchAdminUsers(),
+    staleTime: 0,
+  });
+}
+
+export function useSetUserActive() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, active }: { userId: string; active: boolean }) =>
+      setUserActive(userId, active),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['adminUsers'] });
+    },
+  });
+}
+
+export function useDeleteFeedback() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteFeedback(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['adminFeedback'] });
+    },
   });
 }
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView,
+  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -16,12 +16,13 @@ export default function CreateGroupScreen({ navigation }: Props) {
   const mutation = useCreateGroup(user?.id ?? '');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [requiresConfirmation, setRequiresConfirmation] = useState(false);
 
   async function submit() {
     if (!name.trim()) return;
     try {
-      const group = await mutation.mutateAsync({ name: name.trim(), description: description.trim() });
-      navigation.replace('GroupDetail', { groupId: group.id, groupName: group.name, inviteCode: group.inviteCode });
+      const group = await mutation.mutateAsync({ name: name.trim(), description: description.trim(), requiresConfirmation });
+      navigation.replace('GroupDetail', { groupId: group.id, groupName: group.name, inviteCode: group.inviteCode, createdBy: group.createdBy, requiresConfirmation: group.requiresConfirmation });
     } catch (e: any) {
       Alert.alert('Failed to create group', e.message);
     }
@@ -51,6 +52,19 @@ export default function CreateGroupScreen({ navigation }: Props) {
             maxLength={200}
             textAlignVertical="top"
           />
+
+          <View style={styles.confirmRow}>
+            <View style={styles.confirmText}>
+              <Text style={styles.label}>Require approval to join</Text>
+              <Text style={styles.confirmSub}>New members must be approved by an admin before joining</Text>
+            </View>
+            <Switch
+              value={requiresConfirmation}
+              onValueChange={setRequiresConfirmation}
+              trackColor={{ false: '#ddd', true: '#2D5016' }}
+              thumbColor="#fff"
+            />
+          </View>
 
           <View style={styles.infoBox}>
             <Text style={styles.infoText}>
@@ -88,6 +102,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   textArea: { minHeight: 90 },
+  confirmRow: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
+    borderRadius: 10, borderWidth: 1, borderColor: '#e0e0e0',
+    padding: 14, marginBottom: 20, gap: 12,
+  },
+  confirmText: { flex: 1 },
+  confirmSub: { fontSize: 12, color: '#999', marginTop: 2 },
   infoBox: { backgroundColor: '#e8f5e9', borderRadius: 10, padding: 14, marginBottom: 24 },
   infoText: { fontSize: 13, color: '#444', lineHeight: 18 },
   button: { backgroundColor: '#2D5016', borderRadius: 12, padding: 16, alignItems: 'center' },

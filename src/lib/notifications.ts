@@ -72,6 +72,12 @@ export function handleNotificationNavigation(data: Record<string, unknown>): voi
     case 'challenge':
       navigationRef.navigate('Community' as never);
       break;
+    case 'join_request':
+      navigationRef.navigate('Community' as never);
+      break;
+    case 'meetup':
+      navigationRef.navigate('Community' as never);
+      break;
   }
 }
 

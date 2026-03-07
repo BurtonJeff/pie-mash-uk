@@ -228,6 +228,7 @@ export default function JourneyScreen({ navigation }: Props) {
         earned={!!selectedBadge}
         awardedAt={selectedBadge?.awardedAt}
         profile={profile}
+        visitedShopIds={new Set(checkins.map((c) => c.shop_id))}
         onClose={() => setSelectedBadge(null)}
       />
     </SafeAreaView>

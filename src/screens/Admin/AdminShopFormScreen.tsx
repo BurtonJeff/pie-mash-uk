@@ -9,6 +9,8 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,7 +25,7 @@ import {
   useDeleteShopPhoto,
   useSetShopPhotoPrimary,
 } from '../../hooks/useAdmin';
-import { ShopFormData, ShopPhoto } from '../../lib/admin';
+import { ShopFormData, ShopPhoto, OpeningHours, DayHours, DAYS, DEFAULT_OPENING_HOURS } from '../../lib/admin';
 import { shopPhotoUrl } from '../../utils/shopUtils';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'AdminShopForm'>;
@@ -49,9 +51,11 @@ export default function AdminShopFormScreen({ navigation, route }: Props) {
     postcode: '',
     phone: '',
     website: '',
+    facebook_url: '',
     latitude: '',
     longitude: '',
     price_range: 1,
+    opening_hours: DEFAULT_OPENING_HOURS,
   });
 
   useLayoutEffect(() => {
@@ -69,15 +73,28 @@ export default function AdminShopFormScreen({ navigation, route }: Props) {
         postcode: existingShop.postcode,
         phone: existingShop.phone || '',
         website: existingShop.website || '',
+        facebook_url: existingShop.facebook_url || '',
         latitude: existingShop.latitude.toString(),
         longitude: existingShop.longitude.toString(),
         price_range: existingShop.price_range,
+        opening_hours: (existingShop.opening_hours && Object.keys(existingShop.opening_hours).length > 0)
+          ? existingShop.opening_hours as OpeningHours
+          : DEFAULT_OPENING_HOURS,
       });
     }
   }, [existingShop]);
 
   const set = (key: keyof ShopFormData, value: any) =>
     setForm((prev) => ({ ...prev, [key]: value }));
+
+  const setDay = (day: string, patch: Partial<DayHours>) =>
+    setForm((prev) => ({
+      ...prev,
+      opening_hours: {
+        ...prev.opening_hours,
+        [day]: { ...prev.opening_hours[day], ...patch },
+      },
+    }));
 
   const validate = (): string | null => {
     if (!form.name.trim()) return 'Name is required.';
@@ -188,6 +205,7 @@ export default function AdminShopFormScreen({ navigation, route }: Props) {
   }
 
   return (
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
@@ -272,6 +290,17 @@ export default function AdminShopFormScreen({ navigation, route }: Props) {
         autoCapitalize="none"
       />
 
+      <FieldLabel label="Facebook Page" />
+      <TextInput
+        style={styles.input}
+        value={form.facebook_url}
+        onChangeText={(v) => set('facebook_url', v)}
+        placeholder="e.g. https://www.facebook.com/mmanze"
+        placeholderTextColor="#bbb"
+        keyboardType="url"
+        autoCapitalize="none"
+      />
+
       <FieldLabel label="Latitude" required />
       <TextInput
         style={styles.input}
@@ -291,6 +320,49 @@ export default function AdminShopFormScreen({ navigation, route }: Props) {
         placeholderTextColor="#bbb"
         keyboardType="numeric"
       />
+
+      {/* Opening Hours */}
+      <FieldLabel label="Opening Hours" />
+      <View style={styles.hoursWrap}>
+        {DAYS.map((day) => {
+          const hours = form.opening_hours[day] ?? { open: '11:00', close: '14:00', closed: false };
+          const label = day.charAt(0).toUpperCase() + day.slice(1, 3);
+          return (
+            <View key={day} style={styles.dayRow}>
+              <Text style={styles.dayLabel}>{label}</Text>
+              <TouchableOpacity
+                style={[styles.closedToggle, hours.closed && styles.closedToggleOn]}
+                onPress={() => setDay(day, { closed: !hours.closed })}
+              >
+                <Text style={[styles.closedToggleText, hours.closed && styles.closedToggleTextOn]}>
+                  {hours.closed ? 'Closed' : 'Open'}
+                </Text>
+              </TouchableOpacity>
+              <TextInput
+                style={[styles.timeInput, hours.closed && styles.timeInputDisabled]}
+                value={hours.open}
+                onChangeText={(v) => setDay(day, { open: v })}
+                placeholder="09:00"
+                placeholderTextColor="#ccc"
+                editable={!hours.closed}
+                maxLength={5}
+                keyboardType="numbers-and-punctuation"
+              />
+              <Text style={styles.timeSep}>–</Text>
+              <TextInput
+                style={[styles.timeInput, hours.closed && styles.timeInputDisabled]}
+                value={hours.close}
+                onChangeText={(v) => setDay(day, { close: v })}
+                placeholder="17:00"
+                placeholderTextColor="#ccc"
+                editable={!hours.closed}
+                maxLength={5}
+                keyboardType="numbers-and-punctuation"
+              />
+            </View>
+          );
+        })}
+      </View>
 
       {/* Photos — only available when editing an existing shop */}
       {isEditing && (
@@ -388,6 +460,7 @@ export default function AdminShopFormScreen({ navigation, route }: Props) {
         <Text style={styles.discardButtonText}>Discard</Text>
       </TouchableOpacity>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -429,6 +502,73 @@ const styles = StyleSheet.create({
   multiline: {
     minHeight: 80,
     textAlignVertical: 'top',
+  },
+
+  // ── Opening Hours ─────────────────────────────────────────
+  hoursWrap: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e0ddd8',
+    overflow: 'hidden',
+  },
+  dayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0ede8',
+    gap: 8,
+  },
+  dayLabel: {
+    width: 30,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#555',
+  },
+  closedToggle: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#2D5016',
+    backgroundColor: '#eef4e8',
+    minWidth: 58,
+    alignItems: 'center',
+  },
+  closedToggleOn: {
+    backgroundColor: '#f5f5f5',
+    borderColor: '#ccc',
+  },
+  closedToggleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2D5016',
+  },
+  closedToggleTextOn: {
+    color: '#aaa',
+  },
+  timeInput: {
+    flex: 1,
+    backgroundColor: '#f8f5f0',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#e0ddd8',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    fontSize: 13,
+    color: '#1a1a1a',
+    textAlign: 'center',
+  },
+  timeInputDisabled: {
+    backgroundColor: '#f5f5f5',
+    color: '#ccc',
+    borderColor: '#eee',
+  },
+  timeSep: {
+    fontSize: 14,
+    color: '#aaa',
   },
 
   // ── Photos ────────────────────────────────────────────────

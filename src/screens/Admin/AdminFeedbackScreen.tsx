@@ -6,16 +6,31 @@ import {
   FlatList,
   ActivityIndicator,
   Image,
+  TouchableOpacity,
+  Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AdminStackParamList } from '../../navigation/AdminNavigator';
-import { useAdminFeedback } from '../../hooks/useAdmin';
+import { useAdminFeedback, useDeleteFeedback } from '../../hooks/useAdmin';
 import { FeedbackItem } from '../../lib/admin';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'AdminFeedback'>;
 
 export default function AdminFeedbackScreen(_: Props) {
   const { data: items = [], isLoading } = useAdminFeedback();
+  const deleteMutation = useDeleteFeedback();
+
+  function confirmDelete(item: FeedbackItem) {
+    Alert.alert('Delete Feedback', 'Are you sure you want to delete this feedback?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => deleteMutation.mutate(item.id),
+      },
+    ]);
+  }
 
   if (isLoading) {
     return <ActivityIndicator size="large" color="#2D5016" style={styles.loader} />;
@@ -35,13 +50,15 @@ export default function AdminFeedbackScreen(_: Props) {
       contentContainerStyle={styles.content}
       data={items}
       keyExtractor={(item) => item.id}
-      renderItem={({ item }) => <FeedbackCard item={item} />}
+      renderItem={({ item }) => (
+        <FeedbackCard item={item} onDelete={() => confirmDelete(item)} />
+      )}
       showsVerticalScrollIndicator={false}
     />
   );
 }
 
-function FeedbackCard({ item }: { item: FeedbackItem }) {
+function FeedbackCard({ item, onDelete }: { item: FeedbackItem; onDelete: () => void }) {
   const user = item.user;
   const name = user?.display_name ?? 'Unknown User';
   const username = user?.username ? `@${user.username}` : '';
@@ -83,6 +100,11 @@ function FeedbackCard({ item }: { item: FeedbackItem }) {
 
       {/* Message */}
       <Text style={styles.message}>{item.message}</Text>
+
+      <TouchableOpacity style={styles.deleteBtn} onPress={onDelete}>
+        <Ionicons name="trash-outline" size={14} color="#c0392b" />
+        <Text style={styles.deleteBtnText}>Delete</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -161,4 +183,18 @@ const styles = StyleSheet.create({
     color: '#333',
     lineHeight: 20,
   },
+  deleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-end',
+    marginTop: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#f5c6c6',
+    backgroundColor: '#fef2f2',
+  },
+  deleteBtnText: { fontSize: 12, color: '#c0392b', fontWeight: '600' },
 });

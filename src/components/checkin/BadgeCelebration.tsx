@@ -8,6 +8,7 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Badge } from '../../types/database';
 
 interface Props {
@@ -15,9 +16,10 @@ interface Props {
   newBadges: Badge[];
   shopName: string;
   onDone: () => void;
+  onShare?: () => void;
 }
 
-export default function BadgeCelebration({ pointsEarned, newBadges, shopName, onDone }: Props) {
+export default function BadgeCelebration({ pointsEarned, newBadges, shopName, onDone, onShare }: Props) {
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -61,6 +63,13 @@ export default function BadgeCelebration({ pointsEarned, newBadges, shopName, on
               </View>
             ))}
           </View>
+        )}
+
+        {onShare && (
+          <TouchableOpacity style={styles.shareButton} onPress={onShare}>
+            <Ionicons name="share-outline" size={18} color="#2D5016" />
+            <Text style={styles.shareText}>Share</Text>
+          </TouchableOpacity>
         )}
 
         <TouchableOpacity style={styles.doneButton} onPress={onDone}>
@@ -113,11 +122,22 @@ const styles = StyleSheet.create({
   badgeInfo: { flex: 1 },
   badgeName: { fontSize: 15, fontWeight: '700', color: '#fff' },
   badgeDesc: { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
-  doneButton: {
+  shareButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     backgroundColor: '#fff',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    marginBottom: 12,
+  },
+  shareText: { color: '#2D5016', fontWeight: '700', fontSize: 15 },
+  doneButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 14,
     paddingVertical: 16,
     paddingHorizontal: 48,
   },
-  doneText: { color: '#2D5016', fontWeight: '800', fontSize: 16 },
+  doneText: { color: '#fff', fontWeight: '800', fontSize: 16 },
 });

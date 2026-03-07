@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useState } from 'react';
 import {
   View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, Alert, Switch,
+  ActivityIndicator, Alert, Switch, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -78,6 +78,7 @@ export default function AdminFaqItemFormScreen({ route, navigation }: Props) {
   const valid = question.trim().length > 0 && answer.trim().length > 0;
 
   return (
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={styles.label}>Question</Text>
       <TextInput
@@ -138,6 +139,7 @@ export default function AdminFaqItemFormScreen({ route, navigation }: Props) {
         </TouchableOpacity>
       )}
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

@@ -26,6 +26,17 @@ export async function fetchShops(): Promise<ShopWithPhoto[]> {
   }));
 }
 
+export async function fetchShopsByIds(ids: string[]): Promise<{ id: string; name: string }[]> {
+  if (ids.length === 0) return [];
+  const { data, error } = await supabase
+    .from('shops')
+    .select('id, name')
+    .in('id', ids)
+    .order('name');
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function fetchShopById(id: string): Promise<ShopWithPhoto & { photos: string[] }> {
   const { data, error } = await supabase
     .from('shops')

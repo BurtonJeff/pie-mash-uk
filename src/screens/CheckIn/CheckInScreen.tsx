@@ -12,6 +12,7 @@ import {
   Platform,
   Image,
   ScrollView,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
@@ -154,12 +155,27 @@ export default function CheckInScreen() {
 
   // ── Success ────────────────────────────────────────────────
   if (step === 'success' && result && selected) {
+    async function handleShare() {
+      const message = `I just checked in at ${selected!.name} on Pie & Mash UK! 🥧 +${result!.pointsEarned} points earned.`;
+      const photoUrl = result!.checkin.photo_url;
+      try {
+        await Share.share(
+          photoUrl
+            ? { message: `${message}\n${photoUrl}`, url: photoUrl }
+            : { message },
+        );
+      } catch {
+        // User cancelled or share failed — no action needed.
+      }
+    }
+
     return (
       <BadgeCelebration
         pointsEarned={result.pointsEarned}
         newBadges={result.newBadges}
         shopName={selected.name}
         onDone={reset}
+        onShare={handleShare}
       />
     );
   }

@@ -85,6 +85,26 @@ export async function setShopActive(shopId: string, active: boolean): Promise<vo
   if (error) throw error;
 }
 
+export interface DayHours {
+  open: string;
+  close: string;
+  closed: boolean;
+}
+
+export type OpeningHours = Record<string, DayHours>;
+
+export const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+
+export const DEFAULT_OPENING_HOURS: OpeningHours = {
+  monday:    { open: '11:00', close: '14:00', closed: false },
+  tuesday:   { open: '11:00', close: '14:00', closed: false },
+  wednesday: { open: '11:00', close: '14:00', closed: false },
+  thursday:  { open: '11:00', close: '14:00', closed: false },
+  friday:    { open: '11:00', close: '14:30', closed: false },
+  saturday:  { open: '10:00', close: '14:30', closed: false },
+  sunday:    { open: '00:00', close: '00:00', closed: true  },
+};
+
 export interface ShopFormData {
   name: string;
   description: string;
@@ -94,9 +114,11 @@ export interface ShopFormData {
   postcode: string;
   phone: string;
   website: string;
+  facebook_url: string;
   latitude: string;
   longitude: string;
   price_range: 1 | 2 | 3 | 4;
+  opening_hours: OpeningHours;
 }
 
 export async function fetchAdminShopById(shopId: string): Promise<AdminShop> {
@@ -133,10 +155,11 @@ export async function addShop(data: ShopFormData): Promise<void> {
     postcode: data.postcode,
     phone: data.phone || null,
     website: data.website || null,
+    facebook_url: data.facebook_url || null,
     latitude: parseFloat(data.latitude),
     longitude: parseFloat(data.longitude),
     price_range: data.price_range,
-    opening_hours: {},
+    opening_hours: data.opening_hours,
     is_active: true,
     is_featured: false,
   });
@@ -156,9 +179,11 @@ export async function updateShop(shopId: string, data: ShopFormData): Promise<vo
       postcode: data.postcode,
       phone: data.phone || null,
       website: data.website || null,
+      facebook_url: data.facebook_url || null,
       latitude: parseFloat(data.latitude),
       longitude: parseFloat(data.longitude),
       price_range: data.price_range,
+      opening_hours: data.opening_hours,
     })
     .eq('id', shopId);
 
@@ -260,6 +285,9 @@ export interface AdminChallenge {
   endDate: string;
   scope: 'global' | 'group';
   isActive: boolean;
+  criteriaType: string;
+  criteriaValue: number;
+  criteriaShops: string[];
 }
 
 export async function fetchAdminChallenges(): Promise<AdminChallenge[]> {
@@ -279,6 +307,9 @@ export async function fetchAdminChallenges(): Promise<AdminChallenge[]> {
     endDate: c.end_date,
     scope: c.scope,
     isActive: c.is_active,
+    criteriaType: c.criteria?.type ?? 'total_checkins',
+    criteriaValue: c.criteria?.value ?? 0,
+    criteriaShops: c.criteria?.shops ?? [],
   }));
 }
 
@@ -288,6 +319,9 @@ export interface ChallengeFormData {
   points_reward: string;
   start_date: string;
   end_date: string;
+  criteria_type: 'total_checkins' | 'unique_shops' | 'shop_tour';
+  criteria_value: string;
+  criteria_shops: string[];
 }
 
 export async function fetchAdminChallengeById(challengeId: string): Promise<AdminChallenge> {
@@ -308,6 +342,9 @@ export async function fetchAdminChallengeById(challengeId: string): Promise<Admi
     endDate: data.end_date,
     scope: data.scope,
     isActive: data.is_active,
+    criteriaType: data.criteria?.type ?? 'total_checkins',
+    criteriaValue: data.criteria?.value ?? 0,
+    criteriaShops: data.criteria?.shops ?? [],
   };
 }
 
@@ -320,6 +357,11 @@ export async function updateChallenge(challengeId: string, data: ChallengeFormDa
       points_reward: parseInt(data.points_reward, 10),
       start_date: data.start_date,
       end_date: data.end_date,
+      criteria: {
+        type: data.criteria_type,
+        value: data.criteria_type !== 'shop_tour' ? parseInt(data.criteria_value, 10) : 0,
+        shops: data.criteria_type === 'shop_tour' ? data.criteria_shops : [],
+      },
     })
     .eq('id', challengeId);
 
@@ -327,6 +369,7 @@ export async function updateChallenge(challengeId: string, data: ChallengeFormDa
 }
 
 export async function addChallenge(data: ChallengeFormData): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
   const { error } = await supabase.from('challenges').insert({
     title: data.title,
     description: data.description,
@@ -335,8 +378,13 @@ export async function addChallenge(data: ChallengeFormData): Promise<void> {
     end_date: data.end_date,
     scope: 'global',
     is_active: true,
-    criteria: {},
+    criteria: {
+      type: data.criteria_type,
+      value: data.criteria_type !== 'shop_tour' ? parseInt(data.criteria_value, 10) : 0,
+      shops: data.criteria_type === 'shop_tour' ? data.criteria_shops : [],
+    },
     group_id: null,
+    created_by: user?.id,
   });
 
   if (error) throw error;
@@ -424,6 +472,43 @@ export interface FeedbackItem {
     total_visits: number;
     total_points: number;
   } | null;
+}
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+
+export interface AdminUser {
+  id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+  total_points: number;
+  total_visits: number;
+  unique_shops_visited: number;
+  is_active: boolean;
+  is_admin: boolean;
+  created_at: string;
+}
+
+export async function fetchAdminUsers(): Promise<AdminUser[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, username, display_name, avatar_url, total_points, total_visits, unique_shops_visited, is_active, is_admin, created_at')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function setUserActive(userId: string, active: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ is_active: active })
+    .eq('id', userId);
+  if (error) throw error;
+}
+
+export async function deleteFeedback(id: string): Promise<void> {
+  const { error } = await supabase.from('feedback').delete().eq('id', id);
+  if (error) throw error;
 }
 
 export async function fetchAdminFeedback(): Promise<FeedbackItem[]> {

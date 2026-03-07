@@ -10,11 +10,16 @@ import { HomeStackParamList } from '../../navigation/HomeNavigator';
 import { useAuthStore } from '../../store/authStore';
 import { useProfile } from '../../hooks/useProfile';
 import { useFeaturedShop } from '../../hooks/useHome';
-import { useGlobalFeed } from '../../hooks/useCommunity';
+import { useGlobalFeed, useUpcomingMeetups } from '../../hooks/useCommunity';
+import { useQuery } from '@tanstack/react-query';
+import { fetchAppConfig } from '../../lib/content';
 import FeaturedShopCard from '../../components/home/FeaturedShopCard';
 import DailyFactCard from '../../components/home/DailyFactCard';
 import FeedbackModal from '../../components/home/FeedbackModal';
+import TipJarModal from '../../components/home/TipJarModal';
 import FeedItemComponent from '../../components/community/FeedItem';
+import UpcomingMeetupsCard from '../../components/home/UpcomingMeetupsCard';
+import { UpcomingMeetup } from '../../lib/meetups';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'HomeMain'>;
 
@@ -22,12 +27,30 @@ export default function HomeScreen({ navigation }: Props) {
   const { user } = useAuthStore();
   const userId = user?.id ?? '';
   const [feedbackVisible, setFeedbackVisible] = useState(false);
+  const [tipJarVisible, setTipJarVisible] = useState(false);
 
   const { data: profile } = useProfile(userId);
   const { data: featured, isLoading: featuredLoading } = useFeaturedShop();
   const { data: feed = [] } = useGlobalFeed();
+  const { data: upcomingMeetups = [] } = useUpcomingMeetups(userId);
+  const { data: subtitle } = useQuery({
+    queryKey: ['appConfig', 'home_subtitle'],
+    queryFn: () => fetchAppConfig('home_subtitle'),
+    staleTime: 1000 * 60 * 10,
+  });
 
   const recentFeed = feed.slice(0, 3);
+
+  function handleMeetupPress(meetup: UpcomingMeetup) {
+    navigation.getParent()?.navigate('Community', {
+      screen: 'GroupDetail',
+      params: {
+        groupId: meetup.groupId,
+        groupName: meetup.groupName,
+        createdBy: meetup.groupCreatedBy,
+      },
+    });
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -36,7 +59,9 @@ export default function HomeScreen({ navigation }: Props) {
         showsVerticalScrollIndicator={false}
       >
         {/* Subtitle */}
-        <Text style={styles.subtitle}>Preserving a Great British Tradition, One Visit at a Time</Text>
+        <Text style={styles.subtitle}>
+          {subtitle ?? 'Preserving a Great British Tradition, One Visit at a Time'}
+        </Text>
 
         {/* Stats row */}
         {profile && (
@@ -76,6 +101,20 @@ export default function HomeScreen({ navigation }: Props) {
           <Ionicons name="chevron-forward" size={16} color="#aaa" style={styles.feedbackChevron} />
         </TouchableOpacity>
 
+        {/* Tip jar */}
+        <TouchableOpacity
+          style={styles.feedbackButton}
+          onPress={() => setTipJarVisible(true)}
+          activeOpacity={0.75}
+        >
+          <Ionicons name="heart-outline" size={18} color="#2D5016" />
+          <Text style={styles.feedbackButtonText}>Support the App</Text>
+          <Ionicons name="chevron-forward" size={16} color="#aaa" style={styles.feedbackChevron} />
+        </TouchableOpacity>
+
+        {/* Upcoming meatups */}
+        <UpcomingMeetupsCard meetups={upcomingMeetups} onPress={handleMeetupPress} />
+
         {/* Recent community activity */}
         {recentFeed.length > 0 && (
           <View style={styles.section}>
@@ -104,6 +143,10 @@ export default function HomeScreen({ navigation }: Props) {
         visible={feedbackVisible}
         userId={userId}
         onClose={() => setFeedbackVisible(false)}
+      />
+      <TipJarModal
+        visible={tipJarVisible}
+        onClose={() => setTipJarVisible(false)}
       />
     </SafeAreaView>
   );

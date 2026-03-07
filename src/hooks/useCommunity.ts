@@ -2,7 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchAllTimeLeaderboard, fetchWeeklyLeaderboard, fetchGroupLeaderboard } from '../lib/leaderboard';
 import { fetchGlobalFeed, fetchGroupFeed } from '../lib/feed';
 import { fetchActiveChallenges } from '../lib/challenges';
-import { fetchUserGroups, createGroup, joinGroupByCode, fetchGroupMessages, sendMessage, fetchGroupMembers, removeGroupMember } from '../lib/groups';
+import { fetchUserGroups, createGroup, joinGroupByCode, fetchGroupMessages, sendMessage, fetchGroupMembers, fetchPendingMembers, removeGroupMember, updateMemberRole, approveGroupMember, rejectGroupMember, setGroupRequiresConfirmation, deleteGroupChat } from '../lib/groups';
+import { fetchGroupMeetups, proposeMeetup, updateMeetup, cancelMeetup, rsvpMeetup, unrsvpMeetup, fetchMeetupRsvps, fetchUpcomingUserMeetups } from '../lib/meetups';
 
 export function useAllTimeLeaderboard() {
   return useQuery({ queryKey: ['leaderboard', 'alltime'], queryFn: () => fetchAllTimeLeaderboard(), staleTime: 60000 });
@@ -45,8 +46,8 @@ export function useUserGroups(userId: string) {
 export function useCreateGroup(userId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ name, description }: { name: string; description: string }) =>
-      createGroup(userId, name, description),
+    mutationFn: ({ name, description, requiresConfirmation }: { name: string; description: string; requiresConfirmation: boolean }) =>
+      createGroup(userId, name, description, requiresConfirmation),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['groups', userId] }),
   });
 }
@@ -89,6 +90,137 @@ export function useRemoveGroupMember(groupId: string) {
   return useMutation({
     mutationFn: (targetUserId: string) => removeGroupMember(groupId, targetUserId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['groupMembers', groupId] }),
+  });
+}
+
+export function usePendingMembers(groupId: string) {
+  return useQuery({
+    queryKey: ['pendingMembers', groupId],
+    queryFn: () => fetchPendingMembers(groupId),
+    enabled: !!groupId,
+  });
+}
+
+export function useApproveGroupMember(groupId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (targetUserId: string) => approveGroupMember(groupId, targetUserId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['pendingMembers', groupId] });
+      qc.invalidateQueries({ queryKey: ['groupMembers', groupId] });
+    },
+  });
+}
+
+export function useRejectGroupMember(groupId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (targetUserId: string) => rejectGroupMember(groupId, targetUserId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['pendingMembers', groupId] }),
+  });
+}
+
+export function useSetGroupRequiresConfirmation(groupId: string, userId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (value: boolean) => setGroupRequiresConfirmation(groupId, value),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['groups', userId] }),
+  });
+}
+
+export function useUpdateMemberRole(groupId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ targetUserId, role }: { targetUserId: string; role: 'admin' | 'member' }) =>
+      updateMemberRole(groupId, targetUserId, role),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['groupMembers', groupId] }),
+  });
+}
+
+export function useDeleteGroupChat(groupId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => deleteGroupChat(groupId),
+    onSuccess: () => {
+      qc.setQueryData(['messages', groupId], []);
+      qc.invalidateQueries({ queryKey: ['messages', groupId] });
+    },
+  });
+}
+
+export function useGroupMeetups(groupId: string, userId: string) {
+  return useQuery({
+    queryKey: ['meetups', groupId],
+    queryFn: () => fetchGroupMeetups(groupId, userId),
+    enabled: !!groupId && !!userId,
+    staleTime: 30000,
+  });
+}
+
+export function useProposeMeetup(groupId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params: {
+      shopId: string; meetupDate: string; meetupTime: string;
+      description?: string; maxAttendees?: number; proposedBy: string;
+    }) => proposeMeetup({ groupId, ...params }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['meetups', groupId] }),
+  });
+}
+
+export function useUpdateMeetup(groupId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params: {
+      meetupId: string; meetupDate: string; meetupTime: string;
+      description?: string; maxAttendees?: number | null;
+    }) => updateMeetup(params.meetupId, params),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['meetups', groupId] }),
+  });
+}
+
+export function useMeetupRsvps(meetupId: string | null) {
+  return useQuery({
+    queryKey: ['meetupRsvps', meetupId],
+    queryFn: () => fetchMeetupRsvps(meetupId!),
+    enabled: !!meetupId,
+    staleTime: 30000,
+  });
+}
+
+export function useCancelMeetup(groupId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ meetupId, cancelledBy }: { meetupId: string; cancelledBy: string }) =>
+      cancelMeetup(meetupId, cancelledBy),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['meetups', groupId] }),
+  });
+}
+
+export function useRsvpMeetup(groupId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ meetupId, userId }: { meetupId: string; userId: string }) =>
+      rsvpMeetup(meetupId, userId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['meetups', groupId] }),
+  });
+}
+
+export function useUnrsvpMeetup(groupId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ meetupId, userId }: { meetupId: string; userId: string }) =>
+      unrsvpMeetup(meetupId, userId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['meetups', groupId] }),
+  });
+}
+
+export function useUpcomingMeetups(userId: string) {
+  return useQuery({
+    queryKey: ['upcomingMeetups', userId],
+    queryFn: () => fetchUpcomingUserMeetups(userId),
+    enabled: !!userId,
+    staleTime: 60000,
   });
 }
 

@@ -15,6 +15,10 @@ import AdminLegalScreen from '../screens/Admin/AdminLegalScreen';
 import AdminOnboardingScreen from '../screens/Admin/AdminOnboardingScreen';
 import AdminOnboardingFormScreen from '../screens/Admin/AdminOnboardingFormScreen';
 import AdminFeedbackScreen from '../screens/Admin/AdminFeedbackScreen';
+import AdminAppConfigScreen from '../screens/Admin/AdminAppConfigScreen';
+import AdminUsersScreen from '../screens/Admin/AdminUsersScreen';
+import AdminSocialLinksScreen from '../screens/Admin/AdminSocialLinksScreen';
+import AdminSocialLinkFormScreen from '../screens/Admin/AdminSocialLinkFormScreen';
 
 export type AdminStackParamList = {
   AdminHome: undefined;
@@ -32,6 +36,10 @@ export type AdminStackParamList = {
   AdminOnboarding: undefined;
   AdminOnboardingForm: { slideId?: string };
   AdminFeedback: undefined;
+  AdminAppConfig: undefined;
+  AdminUsers: undefined;
+  AdminSocialLinks: undefined;
+  AdminSocialLinkForm: { linkId?: string };
 };
 
 const Stack = createNativeStackNavigator<AdminStackParamList>();
@@ -107,6 +115,25 @@ export default function AdminNavigator() {
         name="AdminFeedback"
         component={AdminFeedbackScreen}
         options={{ title: 'User Feedback' }}
+      />
+      <Stack.Screen
+        name="AdminAppConfig"
+        component={AdminAppConfigScreen}
+        options={{ title: 'App Settings' }}
+      />
+      <Stack.Screen
+        name="AdminUsers"
+        component={AdminUsersScreen}
+        options={{ title: 'Users' }}
+      />
+      <Stack.Screen
+        name="AdminSocialLinks"
+        component={AdminSocialLinksScreen}
+        options={{ title: 'Social Links' }}
+      />
+      <Stack.Screen
+        name="AdminSocialLinkForm"
+        component={AdminSocialLinkFormScreen}
       />
     </Stack.Navigator>
   );

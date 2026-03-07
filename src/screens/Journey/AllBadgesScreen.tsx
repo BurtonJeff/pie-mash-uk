@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/authStore';
-import { useAllBadges, useUserBadges, useProfile } from '../../hooks/useProfile';
+import { useAllBadges, useUserBadges, useProfile, useUserCheckins } from '../../hooks/useProfile';
 import BadgeItem from '../../components/journey/BadgeItem';
 import BadgeDetailModal from '../../components/journey/BadgeDetailModal';
 import { Badge } from '../../types/database';
@@ -33,6 +33,7 @@ export default function AllBadgesScreen() {
   const { data: allBadges = [], isLoading: badgesLoading } = useAllBadges();
   const { data: userBadges = [] } = useUserBadges(userId);
   const { data: profile } = useProfile(userId);
+  const { data: checkins = [] } = useUserCheckins(userId);
 
   const [filter, setFilter] = useState<Filter>('all');
   const [selected, setSelected] = useState<{ badge: Badge; awardedAt?: string } | null>(null);
@@ -40,6 +41,11 @@ export default function AllBadgesScreen() {
   const earnedMap = useMemo(
     () => new Map(userBadges.map((ub) => [ub.badge.id, ub.awarded_at])),
     [userBadges],
+  );
+
+  const visitedShopIds = useMemo(
+    () => new Set(checkins.map((c) => c.shop_id)),
+    [checkins],
   );
 
   const filtered = useMemo(() => {
@@ -110,6 +116,7 @@ export default function AllBadgesScreen() {
                   earned={earnedMap.has(badge.id)}
                   awardedAt={earnedMap.get(badge.id)}
                   profile={profile}
+                  visitedShopIds={visitedShopIds}
                   onPress={() => setSelected({ badge, awardedAt: earnedMap.get(badge.id) })}
                 />
               ))}
@@ -122,6 +129,7 @@ export default function AllBadgesScreen() {
         earned={selected ? earnedMap.has(selected.badge.id) : false}
         awardedAt={selected?.awardedAt}
         profile={profile}
+        visitedShopIds={new Set(checkins.map((c) => c.shop_id))}
         onClose={() => setSelected(null)}
       />
     </SafeAreaView>

@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useQuery } from '@tanstack/react-query';
 import { CommunityStackParamList } from '../../navigation/CommunityNavigator';
 import { useAuthStore } from '../../store/authStore';
 import {
@@ -18,11 +19,10 @@ import GroupCard from '../../components/community/GroupCard';
 import MemberDetailModal from '../../components/community/MemberDetailModal';
 import { LeaderboardEntry } from '../../lib/leaderboard';
 import { GroupMember } from '../../lib/groups';
-
-const FACEBOOK_GROUP_URL = 'https://www.facebook.com/groups/2223751270';
+import { fetchActiveSocialLinks, SocialLink } from '../../lib/content';
 
 type Props = NativeStackScreenProps<CommunityStackParamList, 'CommunityHome'>;
-type Tab = 'leaderboard' | 'challenges' | 'groups';
+type Tab = 'leaderboard' | 'challenges' | 'groups' | 'social';
 type LeaderboardPeriod = 'alltime' | 'weekly';
 
 export default function CommunityScreen({ navigation }: Props) {
@@ -38,6 +38,11 @@ export default function CommunityScreen({ navigation }: Props) {
   const allTime = useAllTimeLeaderboard();
   const weekly = useWeeklyLeaderboard();
   const challenges = useActiveChallenges(groupIds);
+  const socialLinks = useQuery({
+    queryKey: ['socialLinks'],
+    queryFn: () => fetchActiveSocialLinks(),
+    staleTime: 60000,
+  });
 
   const leaderboard = lbPeriod === 'alltime' ? allTime : weekly;
 
@@ -45,6 +50,7 @@ export default function CommunityScreen({ navigation }: Props) {
     { key: 'leaderboard', label: 'Top' },
     { key: 'challenges', label: 'Challenges' },
     { key: 'groups', label: 'Groups' },
+    { key: 'social', label: 'Social' },
   ];
 
   return (
@@ -125,22 +131,6 @@ export default function CommunityScreen({ navigation }: Props) {
           contentContainerStyle={styles.listContent}
           ListHeaderComponent={
             <>
-              {/* Facebook community card */}
-              <TouchableOpacity
-                style={styles.fbCard}
-                onPress={() => Linking.openURL(FACEBOOK_GROUP_URL)}
-                activeOpacity={0.85}
-              >
-                <View style={styles.fbIconWrap}>
-                  <Ionicons name="logo-facebook" size={28} color="#fff" />
-                </View>
-                <View style={styles.fbText}>
-                  <Text style={styles.fbTitle}>Pie, Mash & Liquor Appreciation</Text>
-                  <Text style={styles.fbSub}>Join the conversation in the Facebook group for all things Pie, Mash and Liquor</Text>
-                </View>
-                <Ionicons name="open-outline" size={18} color="#1877F2" />
-              </TouchableOpacity>
-
               {/* In-app group actions */}
               <View style={styles.groupActions}>
                 <TouchableOpacity
@@ -161,7 +151,7 @@ export default function CommunityScreen({ navigation }: Props) {
           renderItem={({ item }) => (
             <GroupCard
               group={item}
-              onPress={() => navigation.navigate('GroupDetail', { groupId: item.id, groupName: item.name, inviteCode: item.inviteCode })}
+              onPress={() => navigation.navigate('GroupDetail', { groupId: item.id, groupName: item.name, inviteCode: item.inviteCode, createdBy: item.createdBy, requiresConfirmation: item.requiresConfirmation })}
             />
           )}
           ListEmptyComponent={
@@ -174,11 +164,44 @@ export default function CommunityScreen({ navigation }: Props) {
         />
       )}
 
+      {/* ── Social ───────────────────────────────────────── */}
+      {tab === 'social' && socialLinks.isLoading && <ActivityIndicator style={styles.loader} color="#2D5016" />}
+      {tab === 'social' && !socialLinks.isLoading && (
+        <FlatList
+          data={socialLinks.data ?? []}
+          keyExtractor={(l) => l.id}
+          contentContainerStyle={styles.listContent}
+          renderItem={({ item }) => <SocialLinkCard link={item} />}
+          ListEmptyComponent={
+            <View style={styles.emptyWrap}>
+              <Text style={styles.emptyEmoji}>🌐</Text>
+              <Text style={styles.empty}>No social links yet.</Text>
+            </View>
+          }
+        />
+      )}
+
       <MemberDetailModal
         member={selectedEntry ? entryToMember(selectedEntry) : null}
         onClose={() => setSelectedEntry(null)}
       />
     </SafeAreaView>
+  );
+}
+
+function SocialLinkCard({ link }: { link: SocialLink }) {
+  return (
+    <TouchableOpacity
+      style={styles.socialCard}
+      onPress={() => Linking.openURL(link.url)}
+      activeOpacity={0.85}
+    >
+      <View style={[styles.socialIconWrap, { backgroundColor: link.icon_color }]}>
+        <Ionicons name={link.icon_name as any} size={26} color="#fff" />
+      </View>
+      <Text style={styles.socialLabel}>{link.label}</Text>
+      <Ionicons name="open-outline" size={18} color="#aaa" />
+    </TouchableOpacity>
   );
 }
 
@@ -193,6 +216,7 @@ function entryToMember(entry: LeaderboardEntry): GroupMember {
     totalVisits: entry.totalVisits,
     uniqueShopsVisited: entry.uniqueShops,
     role: 'member',
+    status: 'active',
     joinedAt: entry.memberSince,
   };
 }
@@ -236,29 +260,28 @@ const styles = StyleSheet.create({
   emptyEmoji: { fontSize: 40, marginBottom: 12 },
   emptySub: { fontSize: 13, color: '#bbb', marginTop: 4 },
 
-  // ── Facebook card ──────────────────────────────────
-  fbCard: {
+  // ── Social cards ───────────────────────────────────
+  socialCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
     borderRadius: 14,
     padding: 14,
-    marginBottom: 12,
-    borderWidth: 1.5,
-    borderColor: '#1877F2',
-    gap: 12,
+    marginBottom: 10,
+    gap: 14,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  fbIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    backgroundColor: '#1877F2',
+  socialIconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  fbText: { flex: 1 },
-  fbTitle: { fontSize: 14, fontWeight: '700', color: '#1a1a1a', marginBottom: 2 },
-  fbSub: { fontSize: 12, color: '#888', lineHeight: 17 },
+  socialLabel: { flex: 1, fontSize: 15, fontWeight: '600', color: '#1a1a1a' },
 
   groupActions: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   groupActionButton: {

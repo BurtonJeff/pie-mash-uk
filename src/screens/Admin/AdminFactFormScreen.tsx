@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useState } from 'react';
 import {
   View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, Alert, Switch,
+  ActivityIndicator, Alert, Switch, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -76,6 +76,7 @@ export default function AdminFactFormScreen({ route, navigation }: Props) {
   const busy = save.isPending || remove.isPending;
 
   return (
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={styles.label}>Fact</Text>
       <TextInput
@@ -128,6 +129,7 @@ export default function AdminFactFormScreen({ route, navigation }: Props) {
         </TouchableOpacity>
       )}
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

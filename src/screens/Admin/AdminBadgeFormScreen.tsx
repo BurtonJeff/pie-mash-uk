@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -135,6 +137,7 @@ export default function AdminBadgeFormScreen({ navigation, route }: Props) {
   }
 
   return (
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
@@ -264,6 +267,7 @@ export default function AdminBadgeFormScreen({ navigation, route }: Props) {
         <Text style={styles.discardButtonText}>Discard</Text>
       </TouchableOpacity>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

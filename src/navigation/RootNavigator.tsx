@@ -35,10 +35,17 @@ export default function RootNavigator() {
     }
     supabase
       .from('profiles')
-      .select('is_admin')
+      .select('is_admin, is_active')
       .eq('id', user.id)
       .single()
-      .then(({ data }) => setIsAdmin(data?.is_admin ?? false));
+      .then(({ data }) => {
+        if (data?.is_active === false) {
+          supabase.auth.signOut();
+          setIsAdmin(false);
+        } else {
+          setIsAdmin(data?.is_admin ?? false);
+        }
+      });
   }, [initialized, user?.id]);
 
   // Wait until auth, AsyncStorage, and admin check are all resolved

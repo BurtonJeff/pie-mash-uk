@@ -4,13 +4,16 @@ import {
   Image, ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
 import { Badge, Profile } from '../../types/database';
+import { fetchShopsByIds } from '../../lib/shops';
 
 interface Props {
   badge: Badge | null;
   earned: boolean;
   awardedAt?: string;
   profile?: Profile;
+  visitedShopIds?: Set<string>;
   onClose: () => void;
 }
 
@@ -22,7 +25,12 @@ const CATEGORY_LABELS: Record<string, string> = {
   seasonal: 'Seasonal',
   speed: 'Speed',
   group: 'Group',
+  shop_tour: 'Shop Tour',
 };
+
+function toTitleCase(str: string): string {
+  return str.replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 function criteriaText(type: string, value: number): string {
   if (type === 'total_checkins') return `Check in ${value} time${value !== 1 ? 's' : ''}`;
@@ -30,7 +38,7 @@ function criteriaText(type: string, value: number): string {
   return `${type.replace(/_/g, ' ')} — ${value}`;
 }
 
-function getProgress(badge: Badge, profile?: Profile): number | null {
+function getProgress(badge: Badge, profile?: Profile, visitedShopIds?: Set<string>): number | null {
   if (!profile) return null;
   if (badge.criteria_type === 'total_checkins') {
     return Math.min(profile.total_visits / badge.criteria_value, 1);
@@ -38,13 +46,25 @@ function getProgress(badge: Badge, profile?: Profile): number | null {
   if (badge.criteria_type === 'unique_shops') {
     return Math.min(profile.unique_shops_visited / badge.criteria_value, 1);
   }
+  if (badge.criteria_shops?.length) {
+    if (!visitedShopIds) return null;
+    const visitedCount = badge.criteria_shops.filter(id => visitedShopIds.has(id)).length;
+    return visitedCount / badge.criteria_shops.length;
+  }
   return null;
 }
 
-export default function BadgeDetailModal({ badge, earned, awardedAt, profile, onClose }: Props) {
+export default function BadgeDetailModal({ badge, earned, awardedAt, profile, visitedShopIds, onClose }: Props) {
+  const { data: badgeShops = [] } = useQuery({
+    queryKey: ['badgeShops', badge?.criteria_shops],
+    queryFn: () => fetchShopsByIds(badge!.criteria_shops!),
+    enabled: !!badge?.criteria_shops?.length,
+    staleTime: 1000 * 60 * 10,
+  });
+
   if (!badge) return null;
 
-  const progress = earned ? 1 : getProgress(badge, profile);
+  const progress = earned ? 1 : getProgress(badge, profile, visitedShopIds);
   const progressPct = progress !== null ? Math.round(progress * 100) : null;
 
   return (
@@ -72,23 +92,46 @@ export default function BadgeDetailModal({ badge, earned, awardedAt, profile, on
           </View>
 
           {/* Name */}
-          <Text style={styles.name}>{badge.name}</Text>
+          <Text style={styles.name}>{toTitleCase(badge.name)}</Text>
 
           {/* Category chip */}
           <View style={styles.categoryChip}>
             <Text style={styles.categoryText}>
-              {CATEGORY_LABELS[badge.category] ?? badge.category}
+              {CATEGORY_LABELS[badge.category.replace(/ /g, '_')] ?? badge.category}
             </Text>
           </View>
 
           {/* Description */}
           <Text style={styles.description}>{badge.description}</Text>
 
-          {/* Criteria */}
-          <View style={styles.criteriaRow}>
-            <Ionicons name="trophy-outline" size={16} color="#2D5016" style={{ marginRight: 6 }} />
-            <Text style={styles.criteriaText}>{criteriaText(badge.criteria_type, badge.criteria_value)}</Text>
-          </View>
+          {/* Criteria — hidden when a specific shop list is shown */}
+          {badgeShops.length === 0 && (
+            <View style={styles.criteriaRow}>
+              <Ionicons name="trophy-outline" size={16} color="#2D5016" style={{ marginRight: 6 }} />
+              <Text style={styles.criteriaText}>{criteriaText(badge.criteria_type, badge.criteria_value)}</Text>
+            </View>
+          )}
+
+          {/* Shop list for shop-tour badges */}
+          {badgeShops.length > 0 && (
+            <View style={styles.shopListWrap}>
+              <Text style={styles.shopListLabel}>Required shops</Text>
+              {badgeShops.map((shop) => {
+                const visited = visitedShopIds?.has(shop.id) ?? false;
+                return (
+                  <View key={shop.id} style={styles.shopRow}>
+                    <Ionicons
+                      name={visited ? 'checkmark-circle' : 'storefront-outline'}
+                      size={14}
+                      color={visited ? '#2D5016' : '#aaa'}
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text style={[styles.shopName, visited && styles.shopNameVisited]}>{shop.name}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
 
           {/* Earned status */}
           {earned ? (
@@ -166,7 +209,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     marginBottom: 16,
   },
-  categoryText: { fontSize: 12, fontWeight: '700', color: '#2D5016', textTransform: 'uppercase', letterSpacing: 0.6 },
+  categoryText: { fontSize: 12, fontWeight: '700', color: '#2D5016', letterSpacing: 0.6 },
 
   // Description
   description: {
@@ -189,6 +232,30 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
   },
   criteriaText: { fontSize: 14, color: '#555', flex: 1 },
+
+  // Shop list
+  shopListWrap: {
+    alignSelf: 'stretch',
+    backgroundColor: '#f8f5f0',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 20,
+  },
+  shopListLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#888',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 8,
+  },
+  shopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  shopName: { fontSize: 14, color: '#333', flex: 1 },
+  shopNameVisited: { color: '#2D5016', fontWeight: '600' },
 
   // Earned banner
   earnedBanner: {

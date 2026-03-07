@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput,
   TouchableOpacity, Image, Alert, ActivityIndicator,
-  KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView, Platform, Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -63,6 +63,20 @@ export default function EditCheckInScreen({ navigation, route }: Props) {
   function removePhoto() {
     setNewPhotoUri(null);
     setPhotoUrl(null);
+  }
+
+  async function handleShare() {
+    const parts: string[] = [`Just visited ${shopName} for some pie & mash!`];
+    if (notes.trim()) parts.push(notes.trim());
+    parts.push('#PieAndMashUK');
+    const message = parts.join('\n\n');
+    try {
+      const shareOptions: Parameters<typeof Share.share>[0] = { message };
+      if (displayPhoto) shareOptions.url = displayPhoto;
+      await Share.share(shareOptions);
+    } catch {
+      // user cancelled or share not supported — no action needed
+    }
   }
 
   function save() {
@@ -127,6 +141,14 @@ export default function EditCheckInScreen({ navigation, route }: Props) {
           </TouchableOpacity>
 
           <TouchableOpacity
+            style={styles.shareButton}
+            onPress={handleShare}
+            disabled={mutation.isPending}
+          >
+            <Text style={styles.shareButtonText}>Share</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={styles.discardButton}
             onPress={() => navigation.goBack()}
             disabled={mutation.isPending}
@@ -173,6 +195,11 @@ const styles = StyleSheet.create({
   },
   saveButtonDisabled: { opacity: 0.6 },
   saveButtonText: { color: '#fff', fontWeight: '800', fontSize: 16 },
+  shareButton: {
+    borderRadius: 14, padding: 18, alignItems: 'center', marginTop: 12,
+    borderWidth: 1, borderColor: '#2D5016', backgroundColor: '#fff',
+  },
+  shareButtonText: { color: '#2D5016', fontSize: 16, fontWeight: '600' },
   discardButton: {
     borderRadius: 14, padding: 18, alignItems: 'center', marginTop: 12,
     borderWidth: 1, borderColor: '#e0e0e0', backgroundColor: '#fff',

@@ -64,6 +64,21 @@ export default function AdminHomeScreen({ navigation }: Props) {
         label="User Feedback"
         onPress={() => navigation.navigate('AdminFeedback')}
       />
+      <NavCard
+        icon="settings-outline"
+        label="App Settings"
+        onPress={() => navigation.navigate('AdminAppConfig')}
+      />
+      <NavCard
+        icon="people-outline"
+        label="Users"
+        onPress={() => navigation.navigate('AdminUsers')}
+      />
+      <NavCard
+        icon="share-social-outline"
+        label="Social Links"
+        onPress={() => navigation.navigate('AdminSocialLinks')}
+      />
     </ScrollView>
   );
 }

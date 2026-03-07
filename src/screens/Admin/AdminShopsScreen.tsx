@@ -8,6 +8,7 @@ import {
   Switch,
   ActivityIndicator,
   Alert,
+  TextInput,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +25,11 @@ export default function AdminShopsScreen({ navigation }: Props) {
 
   const [featuredPending, setFeaturedPending] = useState<string | null>(null);
   const [activePending, setActivePending] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+
+  const filteredShops = search.trim()
+    ? (shops ?? []).filter((s) => s.name.toLowerCase().includes(search.toLowerCase()))
+    : (shops ?? []);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -104,13 +110,21 @@ export default function AdminShopsScreen({ navigation }: Props) {
 
   return (
     <FlatList
-      data={shops}
+      data={filteredShops}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
       style={styles.container}
       contentContainerStyle={styles.content}
       ListHeaderComponent={
         <View style={styles.header}>
+          <TextInput
+            style={styles.searchInput}
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Filter by name…"
+            clearButtonMode="while-editing"
+            autoCorrect={false}
+          />
           <Text style={styles.sectionLabel}>Shop of the Week</Text>
           <View style={styles.featuredCard}>
             <Ionicons name="star" size={18} color="#f5a623" style={{ marginRight: 8 }} />
@@ -144,6 +158,16 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 12,
     backgroundColor: '#f0ede8',
+  },
+  searchInput: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 15,
+    marginBottom: 16,
   },
   sectionLabel: {
     fontSize: 12,

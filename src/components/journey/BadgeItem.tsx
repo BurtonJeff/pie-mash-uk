@@ -8,11 +8,12 @@ interface Props {
   earned: boolean;
   awardedAt?: string;
   profile?: Profile;
+  visitedShopIds?: Set<string>;
   onPress?: () => void;
 }
 
 /** How far the user is towards earning this badge (0–1), based on known criteria types. */
-function getProgress(badge: Badge, profile?: Profile): number | null {
+function getProgress(badge: Badge, profile?: Profile, visitedShopIds?: Set<string>): number | null {
   if (!profile) return null;
   if (badge.criteria_type === 'total_checkins') {
     return Math.min(profile.total_visits / badge.criteria_value, 1);
@@ -20,11 +21,16 @@ function getProgress(badge: Badge, profile?: Profile): number | null {
   if (badge.criteria_type === 'unique_shops') {
     return Math.min(profile.unique_shops_visited / badge.criteria_value, 1);
   }
+  if (badge.criteria_shops?.length) {
+    if (!visitedShopIds) return null;
+    const visitedCount = badge.criteria_shops.filter((id) => visitedShopIds.has(id)).length;
+    return visitedCount / badge.criteria_shops.length;
+  }
   return null;
 }
 
-export default function BadgeItem({ badge, earned, awardedAt, profile, onPress }: Props) {
-  const progress = earned ? 1 : getProgress(badge, profile);
+export default function BadgeItem({ badge, earned, awardedAt, profile, visitedShopIds, onPress }: Props) {
+  const progress = earned ? 1 : getProgress(badge, profile, visitedShopIds);
 
   return (
     <TouchableOpacity

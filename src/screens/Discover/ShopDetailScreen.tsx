@@ -10,6 +10,7 @@ import {
   Linking,
   Dimensions,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { DiscoverStackParamList } from '../../navigation/DiscoverNavigator';
@@ -24,7 +25,7 @@ import {
 } from '../../utils/shopUtils';
 
 type Props = NativeStackScreenProps<DiscoverStackParamList, 'ShopDetail'>;
-type Tab = 'details' | 'hours' | 'history';
+type Tab = 'details' | 'hours';
 
 const DAY_LABELS: { key: keyof OpeningHours; label: string }[] = [
   { key: 'monday', label: 'Monday' },
@@ -122,7 +123,7 @@ export default function ShopDetailScreen({ route, navigation }: Props) {
 
         {/* Tab switcher */}
         <View style={styles.tabs}>
-          {(['details', 'hours', 'history'] as Tab[]).map((tab) => (
+          {(['details', 'hours'] as Tab[]).map((tab) => (
             <TouchableOpacity
               key={tab}
               style={[styles.tab, activeTab === tab && styles.tabActive]}
@@ -150,11 +151,12 @@ export default function ShopDetailScreen({ route, navigation }: Props) {
                   <InfoRow label="Website" value={shop.website!} link />
                 </TouchableOpacity>
               )}
-
-
               {shop.description ? (
                 <Text style={styles.description}>{shop.description}</Text>
               ) : null}
+              {shop.facebook_url && (
+                <FacebookButton url={shop.facebook_url} />
+              )}
             </View>
           )}
 
@@ -173,21 +175,20 @@ export default function ShopDetailScreen({ route, navigation }: Props) {
             </View>
           )}
 
-          {activeTab === 'history' && (
-            <View>
-              {shop.founded_year && (
-                <Text style={styles.founded}>Founded in {shop.founded_year}</Text>
-              )}
-              {shop.description ? (
-                <Text style={styles.description}>{shop.description}</Text>
-              ) : (
-                <Text style={styles.emptyTabText}>No history information yet.</Text>
-              )}
-            </View>
-          )}
         </View>
+
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function FacebookButton({ url }: { url: string }) {
+  const href = url.startsWith('http') ? url : `https://${url}`;
+  return (
+    <TouchableOpacity style={styles.facebookBtn} onPress={() => Linking.openURL(href)}>
+      <Ionicons name="logo-facebook" size={20} color="#fff" />
+      <Text style={styles.facebookBtnText}>View on Facebook</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -246,6 +247,19 @@ const styles = StyleSheet.create({
   infoValue: { flex: 1, fontSize: 14, color: '#222' },
   infoLink: { color: '#2D5016', textDecorationLine: 'underline' },
 
+
+  facebookBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#1877F2',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginTop: 16,
+    justifyContent: 'center',
+  },
+  facebookBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 
   description: { fontSize: 14, color: '#444', lineHeight: 22, marginTop: 16 },
   founded: { fontSize: 15, fontWeight: '600', marginBottom: 8 },

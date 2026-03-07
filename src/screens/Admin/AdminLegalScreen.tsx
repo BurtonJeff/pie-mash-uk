@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, Alert,
+  ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchLegalContent, saveLegalContent } from '../../lib/content';
@@ -67,10 +67,12 @@ function LegalEditor({ type, title }: { type: LegalType; title: string }) {
 
 export default function AdminLegalScreen() {
   return (
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <LegalEditor type="privacy_policy" title="Privacy Policy" />
       <LegalEditor type="terms_of_service" title="Terms of Service" />
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

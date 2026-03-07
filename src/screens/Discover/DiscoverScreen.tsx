@@ -21,6 +21,7 @@ import { DiscoverStackParamList } from '../../navigation/DiscoverNavigator';
 type Props = NativeStackScreenProps<DiscoverStackParamList, 'DiscoverHome'>;
 
 type ViewMode = 'list' | 'map';
+type SortMode = 'nearest' | 'az' | 'za';
 
 const DEFAULT_REGION = {
   latitude: 51.505,
@@ -32,6 +33,7 @@ const DEFAULT_REGION = {
 export default function DiscoverScreen({ navigation }: Props) {
   const { data: shops = [], isLoading, error } = useShops();
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [sortMode, setSortMode] = useState<SortMode>('nearest');
   const [search, setSearch] = useState('');
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
@@ -43,6 +45,11 @@ export default function DiscoverScreen({ navigation }: Props) {
   }, []);
 
   useEffect(() => { requestLocation(); }, [requestLocation]);
+
+  async function handleSortNearest() {
+    setSortMode('nearest');
+    if (!userLocation) await requestLocation();
+  }
 
   const filtered = useMemo(() => {
     let result = shops;
@@ -57,16 +64,22 @@ export default function DiscoverScreen({ navigation }: Props) {
       );
     }
 
-    if (userLocation) {
+    if (sortMode === 'nearest' && userLocation) {
       return [...result].sort(
         (a, b) =>
           distanceKm(userLocation.latitude, userLocation.longitude, a.latitude, a.longitude) -
           distanceKm(userLocation.latitude, userLocation.longitude, b.latitude, b.longitude),
       );
     }
+    if (sortMode === 'az') {
+      return [...result].sort((a, b) => a.name.localeCompare(b.name));
+    }
+    if (sortMode === 'za') {
+      return [...result].sort((a, b) => b.name.localeCompare(a.name));
+    }
 
     return result;
-  }, [shops, search, userLocation]);
+  }, [shops, search, userLocation, sortMode]);
 
   function getDistance(shop: ShopWithPhoto) {
     if (!userLocation) return undefined;
@@ -91,9 +104,35 @@ export default function DiscoverScreen({ navigation }: Props) {
         />
       </View>
 
-      {/* View mode toggle */}
-      <View style={styles.toggleRow}>
-        <Text style={styles.resultCount}>{filtered.length} shop{filtered.length !== 1 ? 's' : ''}</Text>
+      {/* Sort chips + List/Map toggle */}
+      <View style={styles.sortRow}>
+        <TouchableOpacity
+          style={[styles.sortChip, sortMode === 'nearest' && styles.sortChipActive]}
+          onPress={handleSortNearest}
+        >
+          <Text style={[styles.sortChipText, sortMode === 'nearest' && styles.sortChipTextActive]}>
+            Nearest
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.sortChip, sortMode === 'az' && styles.sortChipActive]}
+          onPress={() => setSortMode('az')}
+        >
+          <Text style={[styles.sortChipText, sortMode === 'az' && styles.sortChipTextActive]}>
+            A – Z
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.sortChip, sortMode === 'za' && styles.sortChipActive]}
+          onPress={() => setSortMode('za')}
+        >
+          <Text style={[styles.sortChipText, sortMode === 'za' && styles.sortChipTextActive]}>
+            Z – A
+          </Text>
+        </TouchableOpacity>
+
+        <View style={styles.toggleSpacer} />
+
         <View style={styles.toggle}>
           <TouchableOpacity
             style={[styles.toggleButton, viewMode === 'list' && styles.toggleButtonActive]}
@@ -164,14 +203,32 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e0e0',
   },
-  toggleRow: {
+  sortRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingBottom: 10,
+    gap: 8,
   },
-  resultCount: { fontSize: 13, color: '#888' },
+  toggleSpacer: { flex: 1 },
+  sortChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: '#e8e0d8',
+  },
+  sortChipActive: {
+    backgroundColor: '#2D5016',
+  },
+  sortChipText: {
+    fontSize: 13,
+    color: '#555',
+    fontWeight: '500',
+  },
+  sortChipTextActive: {
+    color: '#fff',
+    fontWeight: '700',
+  },
   toggle: {
     flexDirection: 'row',
     backgroundColor: '#e8e0d8',

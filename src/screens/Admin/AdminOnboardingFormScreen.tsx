@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useState } from 'react';
 import {
   View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, Alert, Switch, Image,
+  ActivityIndicator, Alert, Switch, Image, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -118,6 +118,7 @@ export default function AdminOnboardingFormScreen({ route, navigation }: Props) 
   const valid = title.trim().length > 0 && subtitle.trim().length > 0;
 
   return (
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
@@ -239,6 +240,7 @@ export default function AdminOnboardingFormScreen({ route, navigation }: Props) 
         </TouchableOpacity>
       )}
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
