@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, Component } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { initAuthListener } from './src/store/authStore';
 import { useAuthStore } from './src/store/authStore';
@@ -14,6 +15,33 @@ import {
 } from './src/lib/notifications';
 
 const queryClient = new QueryClient();
+
+class ErrorBoundary extends Component<{ children: React.ReactNode }, { error: Error | null }> {
+  state = { error: null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      const err = this.state.error as Error;
+      return (
+        <View style={eb.container}>
+          <Text style={eb.title}>Startup Error</Text>
+          <ScrollView>
+            <Text style={eb.message}>{err.message}</Text>
+            <Text style={eb.stack}>{err.stack}</Text>
+          </ScrollView>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const eb = StyleSheet.create({
+  container: { flex: 1, padding: 24, paddingTop: 60, backgroundColor: '#fff' },
+  title: { fontSize: 20, fontWeight: '700', color: '#c00', marginBottom: 12 },
+  message: { fontSize: 15, color: '#333', marginBottom: 12 },
+  stack: { fontSize: 11, color: '#888', fontFamily: 'monospace' },
+});
 
 export default function App() {
   const { session } = useAuthStore();
@@ -36,6 +64,7 @@ export default function App() {
   }, [session?.user?.id]);
 
   return (
+    <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <NavigationContainer
         ref={navigationRef}
@@ -56,5 +85,6 @@ export default function App() {
         <RootNavigator />
       </NavigationContainer>
     </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
