@@ -4,17 +4,6 @@ import { Platform } from 'react-native';
 import { supabase } from './supabase';
 import { navigationRef } from '../navigation/navigationRef';
 
-// Show alerts and play sound when a notification arrives while the app is foregrounded.
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
-
 /**
  * Requests push notification permission, gets the Expo push token,
  * and saves it to the user's profile row so edge functions can reach them.
@@ -86,6 +75,17 @@ export function handleNotificationNavigation(data: Record<string, unknown>): voi
  * Returns a cleanup function — call it in a useEffect return.
  */
 export function setupNotificationHandlers(): () => void {
+  // Show alerts and play sound when a notification arrives while the app is foregrounded.
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+
   // Foreground: notification received while app is open (display handled by setNotificationHandler above).
   const receivedSub = Notifications.addNotificationReceivedListener(() => {
     // No extra action needed; the system handler shows the banner.

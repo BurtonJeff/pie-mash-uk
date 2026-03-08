@@ -3,16 +3,10 @@ import { NavigationContainer } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
-import * as Notifications from 'expo-notifications';
 import { initAuthListener } from './src/store/authStore';
 import { useAuthStore } from './src/store/authStore';
 import RootNavigator from './src/navigation/RootNavigator';
 import { navigationRef } from './src/navigation/navigationRef';
-import {
-  registerForPushNotifications,
-  setupNotificationHandlers,
-  handleNotificationNavigation,
-} from './src/lib/notifications';
 
 const queryClient = new QueryClient();
 
@@ -52,15 +46,31 @@ export default function App() {
   }, []);
 
   // Set up notification tap/receive listeners for the app's lifetime.
+  // Dynamic import so a missing native module never crashes the app.
   useEffect(() => {
-    return setupNotificationHandlers();
+    let cleanup: (() => void) | undefined;
+    (async () => {
+      try {
+        const { setupNotificationHandlers } = await import('./src/lib/notifications');
+        cleanup = setupNotificationHandlers();
+      } catch {
+        // Push notifications unavailable — native module not present.
+      }
+    })();
+    return () => cleanup?.();
   }, []);
 
   // Register / refresh the push token whenever the signed-in user changes.
   useEffect(() => {
-    if (session?.user?.id) {
-      registerForPushNotifications(session.user.id);
-    }
+    if (!session?.user?.id) return;
+    (async () => {
+      try {
+        const { registerForPushNotifications } = await import('./src/lib/notifications');
+        await registerForPushNotifications(session.user.id);
+      } catch {
+        // Push token registration failed — non-fatal.
+      }
+    })();
   }, [session?.user?.id]);
 
   return (
@@ -70,6 +80,10 @@ export default function App() {
         ref={navigationRef}
         onReady={async () => {
           try {
+            const [{ handleNotificationNavigation }, Notifications] = await Promise.all([
+              import('./src/lib/notifications'),
+              import('expo-notifications'),
+            ]);
             const initial = await Notifications.getLastNotificationResponseAsync();
             if (initial) {
               handleNotificationNavigation(

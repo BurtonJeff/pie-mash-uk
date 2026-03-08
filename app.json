@@ -3,6 +3,7 @@
     "name": "Pie & Mash",
     "slug": "pie-mash-uk",
     "version": "1.0.0",
+    "newArchEnabled": false,
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -17,7 +18,12 @@
       "bundleIdentifier": "uk.org.pml.app",
       "usesAppleSignIn": true,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCalendarsUsageDescription": "Pie & Mash needs calendar access to add meetup events.",
+        "NSCalendarsFullAccessUsageDescription": "Pie & Mash needs calendar access to add meetup events.",
+        "NSCalendarsWriteOnlyAccessUsageDescription": "Pie & Mash needs calendar access to add meetup events.",
+        "NSRemindersUsageDescription": "Pie & Mash uses reminders to keep you updated about meetups.",
+        "NSRemindersFullAccessUsageDescription": "Pie & Mash uses reminders to keep you updated about meetups."
       }
     },
     "android": {
@@ -45,6 +51,14 @@
     "plugins": [
       "expo-apple-authentication",
       "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#2D5016",
+          "sounds": []
+        }
+      ],
       "expo-secure-store",
       [
         "expo-local-authentication",
@@ -55,10 +69,12 @@
       [
         "expo-calendar",
         {
-          "calendarPermission": "Pie & Mash needs calendar access to add meatup events.",
-          "remindersPermission": false
+          "calendarPermission": "Pie & Mash needs calendar access to add meetup events.",
+          "remindersPermission": "Pie & Mash uses reminders to keep you updated about meetup events."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-font"
     ],
     "extra": {
       "eas": {
