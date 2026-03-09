@@ -1,8 +1,0 @@
-1.	Adding to calendar does not seem to work, I can see nothing in the calendar on my phone
-2.	Move the ‘feedback’ and ‘support the app’ buttons to below the recent activity list on the home screen
-3.	Selecting the meet up from the home screen takes me to the group screen but not necessarily to the meatup tab
-4.	When using the share option on either ‘checkin’ or when editing a check-in then use the ‘Notes’ content. Also if data has been entered or changed do we need to prompt the user to saves changes before sharing?
-5.	On the recent activity list on the home screen we don’t need the name of the user or the avatar as it’s always the logged in user. Just the name of the shop, the points, the date and time of checkin and the edit icon so the check in can be edited. The photos from the check in don’t need to be displayed here either.
-6.	Rename the ‘Visit History’ tab on profile to ‘Check-Ins’
-7.	Keep the format of the list of check-ins in recent history on the home page the same as the list of check-ins on the  ‘Check-Ins’ tab
-8.	Add list of earned badges to the home screen
