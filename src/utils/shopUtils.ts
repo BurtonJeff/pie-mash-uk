@@ -54,7 +54,8 @@ export function distanceKm(
 }
 
 export function formatDistance(km: number): string {
-  return km < 1 ? `${Math.round(km * 1000)}m` : `${km.toFixed(1)}km`;
+  const miles = km * 0.621371;
+  return miles < 0.1 ? `${Math.round(km * 1000)}m` : `${miles.toFixed(1)} mi`;
 }
 
 export function formatAddress(shop: Shop): string {
