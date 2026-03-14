@@ -197,6 +197,7 @@ export default function JourneyScreen({ navigation }: Props) {
               checkedInAt={item.checked_in_at}
               photoUrl={item.photo_url}
               photoUrls={item.photo_urls}
+              shopPrimaryPhoto={item.shop_primary_photo}
               pointsEarned={item.points_earned}
               onEdit={() => navigation.navigate('EditCheckIn', {
                 checkInId: item.id,

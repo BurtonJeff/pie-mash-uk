@@ -1,22 +1,25 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { shopPhotoUrl } from '../../utils/shopUtils';
 
 interface Props {
   shopName: string;
   checkedInAt: string;
   photoUrl?: string | null;
   photoUrls?: string[];
+  shopPrimaryPhoto?: string | null;
   pointsEarned: number;
   onEdit?: () => void;
 }
 
-export default function VisitRow({ shopName, checkedInAt, photoUrl, photoUrls, pointsEarned, onEdit }: Props) {
+export default function VisitRow({ shopName, checkedInAt, photoUrl, photoUrls, shopPrimaryPhoto, pointsEarned, onEdit }: Props) {
   const date = new Date(checkedInAt);
   const dateStr = date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
   const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   const firstPhoto = (photoUrls && photoUrls.length > 0) ? photoUrls[0] : photoUrl;
   const extraCount = photoUrls && photoUrls.length > 1 ? photoUrls.length - 1 : 0;
+  const fallbackUri = shopPrimaryPhoto ? shopPhotoUrl(shopPrimaryPhoto) : null;
 
   return (
     <View style={styles.row}>
@@ -29,6 +32,8 @@ export default function VisitRow({ shopName, checkedInAt, photoUrl, photoUrls, p
             </View>
           )}
         </View>
+      ) : fallbackUri ? (
+        <Image source={{ uri: fallbackUri }} style={styles.photo} />
       ) : (
         <View style={[styles.photo, styles.photoPlaceholder]}>
           <Text style={styles.photoPlaceholderText}>🥧</Text>

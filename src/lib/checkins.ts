@@ -240,13 +240,21 @@ export async function fetchVisitedShopIds(userId: string): Promise<Set<string>> 
   return new Set((data ?? []).map((r: any) => r.shop_id as string));
 }
 
-export async function fetchUserCheckins(userId: string): Promise<(CheckIn & { shop_name: string })[]> {
+export async function fetchUserCheckins(userId: string): Promise<(CheckIn & { shop_name: string; shop_primary_photo?: string | null })[]> {
   const { data, error } = await supabase
     .from('checkins')
-    .select('*, shops(name)')
+    .select('*, shops(name, shop_photos(storage_path, is_primary))')
     .eq('user_id', userId)
     .order('checked_in_at', { ascending: false });
 
   if (error) throw error;
-  return (data ?? []).map((c: any) => ({ ...c, shop_name: c.shops?.name ?? '' }));
+  return (data ?? []).map((c: any) => {
+    const photos: any[] = c.shops?.shop_photos ?? [];
+    const primary = photos.find((p: any) => p.is_primary) ?? photos[0] ?? null;
+    return {
+      ...c,
+      shop_name: c.shops?.name ?? '',
+      shop_primary_photo: primary?.storage_path ?? null,
+    };
+  });
 }
