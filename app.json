@@ -9,7 +9,7 @@
     "userInterfaceStyle": "light",
     "scheme": "pie-mash-uk",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/merch-logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#2D5016"
     },
