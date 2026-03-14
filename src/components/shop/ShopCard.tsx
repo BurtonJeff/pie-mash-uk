@@ -25,15 +25,13 @@ export default function ShopCard({ shop, distanceKm, visited, onPress }: Props) 
             <Text style={styles.imagePlaceholderText}>No photo</Text>
           </View>
         )}
-        {visited && (
-          <View style={styles.visitedBadge}>
-            <Ionicons name="checkmark-circle" size={22} color="#2D5016" />
-          </View>
-        )}
       </View>
 
       <View style={styles.info}>
-        <Text style={styles.name} numberOfLines={1}>{shop.name}</Text>
+        <View style={styles.nameRow}>
+          <Text style={styles.name} numberOfLines={1}>{shop.name}</Text>
+          {visited && <Ionicons name="checkmark-circle" size={18} color="#2D5016" />}
+        </View>
 
         <Text style={styles.city} numberOfLines={1}>{shop.city}  ·  {shop.postcode}</Text>
 
@@ -68,17 +66,11 @@ const styles = StyleSheet.create({
   },
   image: { width: 90, height: 90 },
   imagePlaceholder: { backgroundColor: '#f0ede8', alignItems: 'center', justifyContent: 'center' },
-  visitedBadge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: '#fff',
-    borderRadius: 11,
-  },
   imagePlaceholderText: { fontSize: 11, color: '#999' },
   info: { flex: 1, padding: 12, justifyContent: 'space-between' },
+  nameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  name: { fontSize: 15, fontWeight: '600', flex: 1, marginRight: 8 },
+  name: { fontSize: 15, fontWeight: '600', flex: 1, marginRight: 6 },
   price: { fontSize: 13, color: '#666' },
   city: { fontSize: 13, color: '#888', marginTop: 2 },
   badge: { borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, marginTop: 6 },
