@@ -19,3 +19,15 @@ export function weekStart(): string {
   d.setDate(d.getDate() - 7);
   return d.toISOString();
 }
+
+export function monthStart(): string {
+  const d = new Date();
+  d.setDate(1);
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+
+export function yearStart(): string {
+  const d = new Date(new Date().getFullYear(), 0, 1);
+  return d.toISOString();
+}

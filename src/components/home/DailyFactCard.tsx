@@ -4,10 +4,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { fetchActiveDidYouKnowFacts } from '../../lib/content';
+import { fetchActiveDidYouKnowFacts, fetchDidYouKnowLinkConfig } from '../../lib/content';
 import { getDailyFact } from '../../utils/facts';
-
-const NORMANS_CONQUEST_URL = 'https://www.amazon.co.uk/Normans-Conquest-invasion-Englands-traditional/dp/B0G6VF3NRL';
 
 function todayIndex(count: number): number {
   if (count === 0) return 0;
@@ -23,6 +21,12 @@ export default function DailyFactCard() {
     queryKey: ['didYouKnow'],
     queryFn: () => fetchActiveDidYouKnowFacts(),
     staleTime: 1000 * 60 * 60,
+  });
+
+  const { data: linkConfig } = useQuery({
+    queryKey: ['didYouKnowLink'],
+    queryFn: () => fetchDidYouKnowLinkConfig(),
+    staleTime: 1000 * 60 * 30,
   });
 
   const items = facts.length > 0 ? facts.map((f) => f.fact) : [getDailyFact()];
@@ -82,11 +86,13 @@ export default function DailyFactCard() {
         )}
       </View>
 
-      <TouchableOpacity onPress={() => Linking.openURL(NORMANS_CONQUEST_URL)} style={styles.linkWrap}>
-        <Text style={styles.linkText}>
-          Learn more from <Text style={styles.linkBold}>Norman's Conquest</Text>
-        </Text>
-      </TouchableOpacity>
+      {linkConfig?.url ? (
+        <TouchableOpacity onPress={() => Linking.openURL(linkConfig.url)} style={styles.linkWrap}>
+          <Text style={styles.linkText}>
+            {linkConfig.text} <Text style={styles.linkBold}>{linkConfig.bold}</Text>
+          </Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }

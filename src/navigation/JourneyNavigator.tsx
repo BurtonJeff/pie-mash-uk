@@ -9,6 +9,7 @@ import FAQScreen from '../screens/Journey/FAQScreen';
 import LegalScreen from '../screens/Journey/LegalScreen';
 import EditCheckInScreen from '../screens/Journey/EditCheckInScreen';
 import AdminNavigator from './AdminNavigator';
+import MyShopsScreen from '../screens/Journey/MyShopsScreen';
 
 export type JourneyStackParamList = {
   JourneyHome: undefined;
@@ -25,6 +26,7 @@ export type JourneyStackParamList = {
     initialNotes: string | null;
   };
   Admin: undefined;
+  MyShops: undefined;
 };
 
 const Stack = createNativeStackNavigator<JourneyStackParamList>();
@@ -46,6 +48,7 @@ export default function JourneyNavigator() {
           title: route.params.type === 'privacy_policy' ? 'Privacy Policy' : 'Terms of Service',
         })}
       />
+      <Stack.Screen name="MyShops" component={MyShopsScreen} options={{ title: 'My Shops' }} />
       <Stack.Group screenOptions={{ presentation: 'modal', headerShown: false }}>
         <Stack.Screen name="Admin" component={AdminNavigator} />
       </Stack.Group>

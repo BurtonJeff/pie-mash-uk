@@ -1,41 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  TextInput, KeyboardAvoidingView, Platform, ActivityIndicator,
+  Platform, ActivityIndicator,
   Image, Alert, Share, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { CommunityStackParamList } from '../../navigation/CommunityNavigator';
 import { useAuthStore } from '../../store/authStore';
-import { useGroupMessages, useSendMessage, useGroupLeaderboard, useGroupFeed, useGroupMembers, useRemoveGroupMember, useUpdateMemberRole, useDeleteGroupChat, usePendingMembers, useApproveGroupMember, useRejectGroupMember, useSetGroupRequiresConfirmation, useGroupMeetups, useProposeMeetup, useUpdateMeetup, useCancelMeetup, useRsvpMeetup, useUnrsvpMeetup } from '../../hooks/useCommunity';
+import { useGroupLeaderboard, useGroupMembers, useRemoveGroupMember, useUpdateMemberRole, usePendingMembers, useApproveGroupMember, useRejectGroupMember, useSetGroupRequiresConfirmation, useGroupMeetups, useProposeMeetup, useUpdateMeetup, useCancelMeetup, useRsvpMeetup, useUnrsvpMeetup, useActiveChallenges } from '../../hooks/useCommunity';
 import MeetupCard from '../../components/community/MeetupCard';
 import ProposeMeetupModal from '../../components/community/ProposeMeetupModal';
 import AttendeesModal from '../../components/community/AttendeesModal';
 import * as Calendar from 'expo-calendar';
 import { GroupMember } from '../../lib/groups';
 import LeaderboardRow from '../../components/community/LeaderboardRow';
-import FeedItemComponent from '../../components/community/FeedItem';
 import MemberDetailModal from '../../components/community/MemberDetailModal';
-import { supabase } from '../../lib/supabase';
-import { GroupMessage } from '../../lib/groups';
+import ChallengeCard from '../../components/community/ChallengeCard';
 import { Ionicons } from '@expo/vector-icons';
-import { timeAgo } from '../../utils/dateUtils';
 
 type Props = NativeStackScreenProps<CommunityStackParamList, 'GroupDetail'>;
-type SubTab = 'chat' | 'meetups' | 'leaderboard' | 'members';
-
-function ChatBubble({ msg, isOwn }: { msg: GroupMessage; isOwn: boolean }) {
-  return (
-    <View style={[styles.bubble, isOwn ? styles.bubbleOwn : styles.bubbleOther]}>
-      {!isOwn && (
-        <Text style={styles.bubbleSender}>{msg.displayName || msg.username}</Text>
-      )}
-      <Text style={[styles.bubbleText, isOwn && styles.bubbleTextOwn]}>{msg.body}</Text>
-      <Text style={[styles.bubbleTime, isOwn && styles.bubbleTimeOwn]}>{timeAgo(msg.createdAt)}</Text>
-    </View>
-  );
-}
+type SubTab = 'meetups' | 'leaderboard' | 'members' | 'challenges';
 
 export default function GroupDetailScreen({ route, navigation }: Props) {
   const { groupId, groupName, inviteCode, createdBy, requiresConfirmation: initialRequiresConfirmation, initialTab } = route.params;
@@ -44,19 +29,13 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   const userId = user?.id ?? '';
 
   const [subTab, setSubTab] = useState<SubTab>(initialTab ?? 'members');
-  const [draft, setDraft] = useState('');
   const [selectedMember, setSelectedMember] = useState<GroupMember | null>(null);
   const [showProposeMeetup, setShowProposeMeetup] = useState(false);
   const [editingMeetup, setEditingMeetup] = useState<import('../../lib/meetups').Meetup | null>(null);
   const [attendeesMeetupId, setAttendeesMeetupId] = useState<string | null>(null);
   const [attendeesShopName, setAttendeesShopName] = useState('');
-  const listRef = useRef<FlatList>(null);
 
-  const { data: messages = [], refetch: refetchMessages } = useGroupMessages(groupId);
-  const sendMutation = useSendMessage(groupId, userId);
-  const deleteChat = useDeleteGroupChat(groupId);
   const leaderboard = useGroupLeaderboard(groupId);
-  const feed = useGroupFeed(groupId);
   const members = useGroupMembers(groupId);
   const removeMember = useRemoveGroupMember(groupId);
   const updateRole = useUpdateMemberRole(groupId);
@@ -64,6 +43,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   const approveGroupMember = useApproveGroupMember(groupId);
   const rejectGroupMember = useRejectGroupMember(groupId);
   const setConfirmation = useSetGroupRequiresConfirmation(groupId, userId);
+  const groupChallenges = useActiveChallenges([groupId]);
   const isAdmin = (members.data ?? []).some((m) => m.userId === userId && m.role === 'admin');
   const pendingCount = (pendingMembers.data ?? []).length;
 
@@ -124,61 +104,15 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
     });
   }
 
-  function confirmDeleteChat() {
-    Alert.alert(
-      'Delete Chat',
-      'This will permanently delete all messages in this group. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete All Messages',
-          style: 'destructive',
-          onPress: () => deleteChat.mutate(),
-        },
-      ],
-    );
-  }
-
   React.useLayoutEffect(() => {
     navigation.setOptions({ title: groupName });
   }, [navigation, groupName]);
-
-  // Real-time subscription for new messages
-  useEffect(() => {
-    const channel = supabase
-      .channel(`group-messages-${groupId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'group_messages', filter: `group_id=eq.${groupId}` },
-        () => { refetchMessages(); },
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [groupId]);
-
-  // Scroll to bottom when messages arrive
-  useEffect(() => {
-    if (messages.length > 0) {
-      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-    }
-  }, [messages.length]);
-
-  async function send() {
-    const body = draft.trim();
-    if (!body) return;
-    setDraft('');
-    try {
-      await sendMutation.mutateAsync(body);
-    } catch (e: any) {
-      Alert.alert('Failed to send', e.message);
-    }
-  }
 
   const SUB_TABS: { key: SubTab; label: string }[] = [
     { key: 'members', label: 'Members' },
     { key: 'leaderboard', label: 'Leaderboard' },
     { key: 'meetups', label: 'Meatups' },
-    { key: 'chat', label: 'Chat' },
+    { key: 'challenges', label: 'Challenges' },
   ];
 
   return (
@@ -202,55 +136,6 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
           </TouchableOpacity>
         ))}
       </View>
-
-      {/* ── Chat ───────────────────────────────────────── */}
-      {subTab === 'chat' && (
-        <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={90}
-        >
-          {isAdmin && messages.length > 0 && (
-            <TouchableOpacity style={styles.deleteChatBar} onPress={confirmDeleteChat}>
-              <Ionicons name="trash-outline" size={15} color="#c0392b" />
-              <Text style={styles.deleteChatText}>Delete chat history</Text>
-            </TouchableOpacity>
-          )}
-          <FlatList
-            ref={listRef}
-            data={messages}
-            keyExtractor={(m) => m.id}
-            contentContainerStyle={styles.chatList}
-            renderItem={({ item }) => (
-              <ChatBubble msg={item} isOwn={item.userId === userId} />
-            )}
-            ListEmptyComponent={
-              <Text style={styles.chatEmpty}>No messages yet. Say hello!</Text>
-            }
-          />
-          <View style={styles.inputRow}>
-            <TextInput
-              style={styles.chatInput}
-              value={draft}
-              onChangeText={setDraft}
-              placeholder="Message…"
-              multiline
-              maxLength={500}
-              onSubmitEditing={send}
-              blurOnSubmit={false}
-            />
-            <TouchableOpacity
-              style={[styles.sendButton, !draft.trim() && styles.sendButtonDisabled]}
-              onPress={send}
-              disabled={!draft.trim() || sendMutation.isPending}
-            >
-              {sendMutation.isPending
-                ? <ActivityIndicator color="#fff" size="small" />
-                : <Text style={styles.sendText}>Send</Text>}
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      )}
 
       {/* ── Meatups ──────────────────────────────────── */}
       {subTab === 'meetups' && (
@@ -475,6 +360,38 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
         )
       )}
 
+      {/* ── Challenges ─────────────────────────────────── */}
+      {subTab === 'challenges' && (
+        groupChallenges.isLoading ? (
+          <ActivityIndicator style={styles.loader} color="#2D5016" />
+        ) : (
+          <FlatList
+            data={(groupChallenges.data ?? []).filter((c) => c.groupId === groupId)}
+            keyExtractor={(c) => c.id}
+            contentContainerStyle={styles.listContent}
+            ListHeaderComponent={
+              isAdmin ? (
+                <TouchableOpacity
+                  style={styles.proposeMeatupBtn}
+                  onPress={() => navigation.navigate('GroupChallengeForm', { groupId })}
+                >
+                  <Ionicons name="add-circle-outline" size={18} color="#fff" />
+                  <Text style={styles.proposeMeatupText}>Create Challenge</Text>
+                </TouchableOpacity>
+              ) : null
+            }
+            renderItem={({ item }) => <ChallengeCard challenge={item} />}
+            ListEmptyComponent={
+              <View style={styles.meatupEmpty}>
+                <Text style={styles.meatupEmptyEmoji}>🏆</Text>
+                <Text style={styles.empty}>No group challenges yet.</Text>
+                {isAdmin && <Text style={styles.meatupEmptySub}>Create one to challenge your group!</Text>}
+              </View>
+            }
+          />
+        )
+      )}
+
       <MemberDetailModal member={selectedMember} onClose={() => setSelectedMember(null)} />
     </SafeAreaView>
   );
@@ -566,58 +483,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   pendingBadgeText: { fontSize: 10, fontWeight: '800', color: '#fff' },
-
-  // Chat
-  deleteChatBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    backgroundColor: '#fff5f5',
-    borderBottomWidth: 1,
-    borderBottomColor: '#fdd',
-  },
-  deleteChatText: { fontSize: 13, color: '#c0392b', fontWeight: '600' },
-  chatList: { padding: 16, paddingBottom: 8 },
-  chatEmpty: { textAlign: 'center', color: '#bbb', marginTop: 40, fontSize: 14 },
-  bubble: { maxWidth: '78%', marginBottom: 10, padding: 10, borderRadius: 14 },
-  bubbleOwn: { alignSelf: 'flex-end', backgroundColor: '#2D5016', borderBottomRightRadius: 4 },
-  bubbleOther: { alignSelf: 'flex-start', backgroundColor: '#fff', borderBottomLeftRadius: 4,
-    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 3, elevation: 1 },
-  bubbleSender: { fontSize: 11, fontWeight: '700', color: '#2D5016', marginBottom: 3 },
-  bubbleText: { fontSize: 14, color: '#222', lineHeight: 20 },
-  bubbleTextOwn: { color: '#fff' },
-  bubbleTime: { fontSize: 10, color: '#aaa', marginTop: 4, textAlign: 'right' },
-  bubbleTimeOwn: { color: 'rgba(255,255,255,0.6)' },
-
-  inputRow: {
-    flexDirection: 'row',
-    padding: 10,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    gap: 8,
-    alignItems: 'flex-end',
-  },
-  chatInput: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    fontSize: 14,
-    maxHeight: 100,
-  },
-  sendButton: {
-    backgroundColor: '#2D5016',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    justifyContent: 'center',
-  },
-  sendButtonDisabled: { backgroundColor: '#ccc' },
-  sendText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 
   listContent: { padding: 16, paddingBottom: 32 },
   loader: { marginTop: 60 },

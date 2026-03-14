@@ -6,14 +6,18 @@ interface AuthState {
   session: Session | null;
   user: User | null;
   initialized: boolean;
+  isPasswordRecovery: boolean;
   setSession: (session: Session | null) => void;
+  setPasswordRecovery: (value: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   session: null,
   user: null,
   initialized: false,
+  isPasswordRecovery: false,
   setSession: (session) => set({ session, user: session?.user ?? null, initialized: true }),
+  setPasswordRecovery: (value) => set({ isPasswordRecovery: value }),
 }));
 
 // Call once at app startup — keeps the store in sync with Supabase auth state.
@@ -26,6 +30,9 @@ export function initAuthListener() {
   });
 
   supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'PASSWORD_RECOVERY') {
+      useAuthStore.getState().setPasswordRecovery(true);
+    }
     useAuthStore.getState().setSession(session);
 
     // Supabase rotates refresh tokens on every refresh. Keep the stored

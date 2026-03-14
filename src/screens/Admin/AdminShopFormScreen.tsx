@@ -56,6 +56,9 @@ export default function AdminShopFormScreen({ navigation, route }: Props) {
     longitude: '',
     price_range: 1,
     opening_hours: DEFAULT_OPENING_HOURS,
+    deliveroo_url: '',
+    uber_eats_url: '',
+    mail_order_url: '',
   });
 
   useLayoutEffect(() => {
@@ -74,6 +77,9 @@ export default function AdminShopFormScreen({ navigation, route }: Props) {
         phone: existingShop.phone || '',
         website: existingShop.website || '',
         facebook_url: existingShop.facebook_url || '',
+        deliveroo_url: existingShop.deliveroo_url || '',
+        uber_eats_url: existingShop.uber_eats_url || '',
+        mail_order_url: existingShop.mail_order_url || '',
         latitude: existingShop.latitude.toString(),
         longitude: existingShop.longitude.toString(),
         price_range: existingShop.price_range,
@@ -301,6 +307,39 @@ export default function AdminShopFormScreen({ navigation, route }: Props) {
         autoCapitalize="none"
       />
 
+      <FieldLabel label="Deliveroo URL" />
+      <TextInput
+        style={styles.input}
+        value={form.deliveroo_url}
+        onChangeText={(v) => set('deliveroo_url', v)}
+        placeholder="e.g. https://deliveroo.co.uk/..."
+        placeholderTextColor="#bbb"
+        keyboardType="url"
+        autoCapitalize="none"
+      />
+
+      <FieldLabel label="Uber Eats URL" />
+      <TextInput
+        style={styles.input}
+        value={form.uber_eats_url}
+        onChangeText={(v) => set('uber_eats_url', v)}
+        placeholder="e.g. https://ubereats.com/..."
+        placeholderTextColor="#bbb"
+        keyboardType="url"
+        autoCapitalize="none"
+      />
+
+      <FieldLabel label="Mail Order URL" />
+      <TextInput
+        style={styles.input}
+        value={form.mail_order_url}
+        onChangeText={(v) => set('mail_order_url', v)}
+        placeholder="e.g. https://..."
+        placeholderTextColor="#bbb"
+        keyboardType="url"
+        autoCapitalize="none"
+      />
+
       <FieldLabel label="Latitude" required />
       <TextInput
         style={styles.input}
@@ -435,6 +474,24 @@ export default function AdminShopFormScreen({ navigation, route }: Props) {
           <Text style={styles.photoNoteText}>
             Photos can be added after saving the shop.
           </Text>
+        </View>
+      )}
+
+      {/* Admin tools — only when editing */}
+      {isEditing && (
+        <View style={styles.adminActionsWrap}>
+          <TouchableOpacity
+            style={styles.adminActionBtn}
+            onPress={() => navigation.navigate('AdminShopAdmins', { shopId: shopId! })}
+          >
+            <Text style={styles.adminActionText}>Manage Admins</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.adminActionBtn, styles.adminActionBtnSecondary]}
+            onPress={() => navigation.navigate('AdminShopHistory', { shopId: shopId! })}
+          >
+            <Text style={[styles.adminActionText, styles.adminActionTextSecondary]}>View History</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -644,6 +701,12 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#e0ddd8', backgroundColor: '#fff',
   },
   discardButtonText: { color: '#666', fontSize: 16, fontWeight: '500' },
+
+  adminActionsWrap: { flexDirection: 'row', gap: 10, marginTop: 20 },
+  adminActionBtn: { flex: 1, backgroundColor: '#2D5016', borderRadius: 10, padding: 14, alignItems: 'center' },
+  adminActionBtnSecondary: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#2D5016' },
+  adminActionText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  adminActionTextSecondary: { color: '#2D5016' },
 
   submitButton: {
     backgroundColor: '#2D5016',

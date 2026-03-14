@@ -236,3 +236,28 @@ export async function saveLegalContent(
     .upsert({ type, content, updated_at: new Date().toISOString() }, { onConflict: 'type' });
   if (error) throw error;
 }
+
+export interface DidYouKnowLinkConfig {
+  url: string;
+  text: string;
+  bold: string;
+}
+
+export async function fetchDidYouKnowLinkConfig(): Promise<DidYouKnowLinkConfig> {
+  const keys = ['did_you_know_link_url', 'did_you_know_link_text', 'did_you_know_link_bold'];
+  const { data, error } = await supabase
+    .from('app_config')
+    .select('key, value')
+    .in('key', keys);
+
+  if (error) throw error;
+
+  const map: Record<string, string> = {};
+  for (const row of data ?? []) map[row.key] = row.value;
+
+  return {
+    url: map['did_you_know_link_url'] ?? '',
+    text: map['did_you_know_link_text'] ?? 'Learn more from',
+    bold: map['did_you_know_link_bold'] ?? "Norman's Conquest",
+  };
+}

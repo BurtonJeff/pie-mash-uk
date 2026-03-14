@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import SocialIcon from '../../components/common/SocialIcon';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AdminStackParamList } from '../../navigation/AdminNavigator';
 import { fetchAllSocialLinks, upsertSocialLink, SocialLink } from '../../lib/content';
@@ -51,7 +52,7 @@ export default function AdminSocialLinksScreen({ navigation }: Props) {
           >
             <View style={styles.cardRow}>
               <View style={[styles.iconPreview, { backgroundColor: item.icon_color }]}>
-                <Ionicons name={item.icon_name as any} size={18} color="#fff" />
+                <SocialIcon name={item.icon_name} size={18} color="#fff" />
               </View>
               <View style={styles.cardText}>
                 <Text style={styles.label}>{item.label}</Text>

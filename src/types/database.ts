@@ -23,6 +23,9 @@ export interface Shop {
   is_featured: boolean;
   created_at: string;
   updated_at: string;
+  deliveroo_url: string | null;
+  uber_eats_url: string | null;
+  mail_order_url: string | null;
 }
 
 export interface Profile {
@@ -36,6 +39,7 @@ export interface Profile {
   unique_shops_visited: number;
   expo_push_token: string | null;
   is_admin: boolean;
+  is_private: boolean;
   created_at: string;
 }
 
@@ -73,4 +77,12 @@ export interface Group {
   created_by: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface ShopAdmin {
+  id: string;
+  user_id: string;
+  shop_id: string;
+  assigned_by: string | null;
+  assigned_at: string;
 }

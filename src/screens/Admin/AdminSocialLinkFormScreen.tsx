@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import SocialIcon from '../../components/common/SocialIcon';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AdminStackParamList } from '../../navigation/AdminNavigator';
 import { fetchAllSocialLinks, upsertSocialLink, deleteSocialLink } from '../../lib/content';
@@ -110,7 +111,7 @@ export default function AdminSocialLinkFormScreen({ route, navigation }: Props) 
           placeholder="e.g. logo-facebook, logo-instagram, globe-outline"
           autoCapitalize="none"
         />
-        <Text style={styles.hint}>Use Ionicons names. Common options: logo-facebook, logo-instagram, logo-twitter, logo-youtube, globe-outline</Text>
+        <Text style={styles.hint}>Ionicons: logo-facebook, logo-instagram, logo-twitter, logo-youtube, globe-outline{'\n'}MaterialCommunityIcons: prefix with "mci:" e.g. mci:wikipedia</Text>
 
         <Text style={styles.label}>Icon Colour (hex)</Text>
         <View style={styles.colorRow}>
@@ -122,7 +123,7 @@ export default function AdminSocialLinkFormScreen({ route, navigation }: Props) 
             autoCapitalize="none"
           />
           <View style={[styles.colorSwatch, { backgroundColor: iconColor }]}>
-            <Ionicons name={iconName as any} size={20} color="#fff" />
+            <SocialIcon name={iconName} size={20} color="#fff" />
           </View>
         </View>
 

@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchAllTimeLeaderboard, fetchWeeklyLeaderboard, fetchGroupLeaderboard } from '../lib/leaderboard';
+import { fetchAllTimeLeaderboard, fetchWeeklyLeaderboard, fetchMonthlyLeaderboard, fetchYearlyLeaderboard, fetchGroupLeaderboard, GroupLeaderboardPeriod } from '../lib/leaderboard';
 import { fetchGlobalFeed, fetchGroupFeed } from '../lib/feed';
-import { fetchActiveChallenges } from '../lib/challenges';
-import { fetchUserGroups, createGroup, joinGroupByCode, fetchGroupMessages, sendMessage, fetchGroupMembers, fetchPendingMembers, removeGroupMember, updateMemberRole, approveGroupMember, rejectGroupMember, setGroupRequiresConfirmation, deleteGroupChat } from '../lib/groups';
+import { fetchActiveChallenges, fetchUserCompletedChallenges } from '../lib/challenges';
+import { fetchUserGroups, createGroup, joinGroupByCode, fetchGroupMembers, fetchPendingMembers, removeGroupMember, updateMemberRole, approveGroupMember, rejectGroupMember, setGroupRequiresConfirmation } from '../lib/groups';
 import { fetchGroupMeetups, proposeMeetup, updateMeetup, cancelMeetup, rsvpMeetup, unrsvpMeetup, fetchMeetupRsvps, fetchUpcomingUserMeetups } from '../lib/meetups';
 
 export function useAllTimeLeaderboard() {
@@ -13,10 +13,18 @@ export function useWeeklyLeaderboard() {
   return useQuery({ queryKey: ['leaderboard', 'weekly'], queryFn: () => fetchWeeklyLeaderboard(), staleTime: 60000 });
 }
 
-export function useGroupLeaderboard(groupId: string) {
+export function useMonthlyLeaderboard() {
+  return useQuery({ queryKey: ['leaderboard', 'monthly'], queryFn: () => fetchMonthlyLeaderboard(), staleTime: 60000 });
+}
+
+export function useYearlyLeaderboard() {
+  return useQuery({ queryKey: ['leaderboard', 'yearly'], queryFn: () => fetchYearlyLeaderboard(), staleTime: 60000 });
+}
+
+export function useGroupLeaderboard(groupId: string, period: GroupLeaderboardPeriod = 'alltime') {
   return useQuery({
-    queryKey: ['leaderboard', 'group', groupId],
-    queryFn: () => fetchGroupLeaderboard(groupId),
+    queryKey: ['leaderboard', 'group', groupId, period],
+    queryFn: () => fetchGroupLeaderboard(groupId, period),
     enabled: !!groupId,
     staleTime: 60000,
   });
@@ -57,23 +65,6 @@ export function useJoinGroup(userId: string) {
   return useMutation({
     mutationFn: (code: string) => joinGroupByCode(userId, code),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['groups', userId] }),
-  });
-}
-
-export function useGroupMessages(groupId: string) {
-  return useQuery({
-    queryKey: ['messages', groupId],
-    queryFn: () => fetchGroupMessages(groupId),
-    enabled: !!groupId,
-    staleTime: 0,
-  });
-}
-
-export function useSendMessage(groupId: string, userId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (body: string) => sendMessage(groupId, userId, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['messages', groupId] }),
   });
 }
 
@@ -134,17 +125,6 @@ export function useUpdateMemberRole(groupId: string) {
     mutationFn: ({ targetUserId, role }: { targetUserId: string; role: 'admin' | 'member' }) =>
       updateMemberRole(groupId, targetUserId, role),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['groupMembers', groupId] }),
-  });
-}
-
-export function useDeleteGroupChat(groupId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: () => deleteGroupChat(groupId),
-    onSuccess: () => {
-      qc.setQueryData(['messages', groupId], []);
-      qc.invalidateQueries({ queryKey: ['messages', groupId] });
-    },
   });
 }
 
@@ -228,6 +208,15 @@ export function useActiveChallenges(userGroupIds: string[]) {
   return useQuery({
     queryKey: ['challenges', userGroupIds],
     queryFn: () => fetchActiveChallenges(userGroupIds),
+    staleTime: 60000,
+  });
+}
+
+export function useUserCompletedChallenges(userId: string) {
+  return useQuery({
+    queryKey: ['completedChallenges', userId],
+    queryFn: () => fetchUserCompletedChallenges(userId),
+    enabled: !!userId,
     staleTime: 60000,
   });
 }

@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <!-- Heart clip path -->
+    <clipPath id="heartClip">
+      <path d="M 200,345
+               C 155,310 80,270 40,225
+               C 15,198 10,175 10,155
+               C 10,90 58,52 118,52
+               C 152,52 180,68 200,95
+               C 220,68 248,52 282,52
+               C 342,52 390,90 390,155
+               C 390,175 385,198 360,225
+               C 320,270 245,310 200,345 Z"/>
+    </clipPath>
+
+    <!-- Main heart body gradient: light centre-top, dark edges -->
+    <radialGradient id="heartBody" cx="48%" cy="38%" r="62%" fx="48%" fy="32%">
+      <stop offset="0%"   stop-color="#5daa2a"/>
+      <stop offset="35%"  stop-color="#2d7510"/>
+      <stop offset="70%"  stop-color="#165008"/>
+      <stop offset="100%" stop-color="#072804"/>
+    </radialGradient>
+
+    <!-- Large soft specular highlight (upper-left area) -->
+    <radialGradient id="spec1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="rgba(255,255,255,0.92)"/>
+      <stop offset="55%"  stop-color="rgba(255,255,255,0.35)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </radialGradient>
+
+    <!-- Small tight specular hot-spot -->
+    <radialGradient id="spec2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="rgba(255,255,255,0.95)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </radialGradient>
+
+    <!-- Subtle green rim highlight at the edge -->
+    <radialGradient id="rimLight" cx="50%" cy="50%" r="50%">
+      <stop offset="75%"  stop-color="rgba(0,0,0,0)"/>
+      <stop offset="100%" stop-color="rgba(120,220,60,0.22)"/>
+    </radialGradient>
+
+    <!-- Drop shadow filter -->
+    <filter id="shadow" x="-10%" y="-8%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="rgba(0,0,0,0.45)"/>
+    </filter>
+
+    <!-- Text drop-shadow -->
+    <filter id="textShadow" x="-5%" y="-5%" width="110%" height="120%">
+      <feDropShadow dx="1" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.6)"/>
+    </filter>
+  </defs>
+
+  <!-- ── Heart body ── -->
+  <path d="M 200,345
+           C 155,310 80,270 40,225
+           C 15,198 10,175 10,155
+           C 10,90 58,52 118,52
+           C 152,52 180,68 200,95
+           C 220,68 248,52 282,52
+           C 342,52 390,90 390,155
+           C 390,175 385,198 360,225
+           C 320,270 245,310 200,345 Z"
+        fill="url(#heartBody)"
+        filter="url(#shadow)"/>
+
+  <!-- ── Rim highlight (clipped) ── -->
+  <rect x="0" y="0" width="400" height="400"
+        fill="url(#rimLight)"
+        clip-path="url(#heartClip)"/>
+
+  <!-- ── Large glossy highlight blob (clipped to heart) ── -->
+  <g clip-path="url(#heartClip)">
+    <ellipse cx="162" cy="128" rx="118" ry="80"
+             fill="url(#spec1)"
+             transform="rotate(-22, 162, 128)"
+             opacity="0.82"/>
+    <!-- Bright hot-spot -->
+    <ellipse cx="148" cy="97" rx="52" ry="33"
+             fill="url(#spec2)"
+             transform="rotate(-20, 148, 97)"
+             opacity="0.6"/>
+  </g>
+
+  <!-- ── P&amp;M text ── -->
+  <text x="200" y="168"
+        font-family="'Arial Black', 'Impact', 'Franklin Gothic Heavy', sans-serif"
+        font-size="94"
+        font-weight="900"
+        text-anchor="middle"
+        dominant-baseline="central"
+        fill="white"
+        stroke="#0c2a04"
+        stroke-width="10"
+        stroke-linejoin="round"
+        paint-order="stroke fill"
+        filter="url(#textShadow)">P&amp;M</text>
+</svg>

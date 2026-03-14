@@ -14,6 +14,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useProfile } from '../../hooks/useProfile';
 import { supabase } from '../../lib/supabase';
 import { signOut } from '../../lib/auth';
+import { isShopAdmin } from '../../lib/admin';
 import { registerForPushNotifications } from '../../lib/notifications';
 import {
   isBiometricsAvailable,
@@ -35,6 +36,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const qc = useQueryClient();
 
   const { data: profile } = useProfile(userId);
+  const [shopAdminAccess, setShopAdminAccess] = useState(false);
 
   const [notifGranted, setNotifGranted] = useState(false);
   const [notifEnabled, setNotifEnabled] = useState(false);
@@ -53,6 +55,11 @@ export default function SettingsScreen({ navigation }: Props) {
       setNotifEnabled(granted && !!profile?.expo_push_token);
     });
   }, [profile?.expo_push_token]);
+
+  useEffect(() => {
+    if (!userId) return;
+    isShopAdmin(userId).then(setShopAdminAccess).catch(() => {});
+  }, [userId]);
 
   useEffect(() => {
     (async () => {
@@ -133,7 +140,7 @@ export default function SettingsScreen({ navigation }: Props) {
         {
           text: 'Send Link',
           onPress: async () => {
-            await supabase.auth.resetPasswordForEmail(email);
+            await supabase.auth.resetPasswordForEmail(email, { redirectTo: 'pie-mash-uk://reset-password' });
             Alert.alert('Email sent', 'Check your inbox for the password reset link.');
           },
         },
@@ -232,6 +239,16 @@ export default function SettingsScreen({ navigation }: Props) {
             <Text style={styles.rowMeta}>{VERSION}</Text>
           </View>
         </View>
+
+        {/* ── My Shops ─────────────────────────────────── */}
+        {shopAdminAccess && !profile?.is_admin && (
+          <>
+            <Text style={styles.sectionLabel}>Shop Management</Text>
+            <View style={styles.group}>
+              <RowLink label="My Shops" onPress={() => navigation.navigate('MyShops')} />
+            </View>
+          </>
+        )}
 
         {/* ── Admin ────────────────────────────────────── */}
         {profile?.is_admin && (

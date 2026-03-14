@@ -157,6 +157,20 @@ export default function ShopDetailScreen({ route, navigation }: Props) {
               {shop.facebook_url && (
                 <FacebookButton url={shop.facebook_url} />
               )}
+              {(shop.deliveroo_url || shop.uber_eats_url || shop.mail_order_url) && (
+                <View style={styles.deliverySection}>
+                  <Text style={styles.deliverySectionLabel}>Order Online</Text>
+                  {shop.deliveroo_url && (
+                    <DeliveryButton label="Order on Deliveroo" url={shop.deliveroo_url} backgroundColor="#00CCBC" iconName="bicycle-outline" />
+                  )}
+                  {shop.uber_eats_url && (
+                    <DeliveryButton label="Order on Uber Eats" url={shop.uber_eats_url} backgroundColor="#000000" iconName="car-outline" />
+                  )}
+                  {shop.mail_order_url && (
+                    <DeliveryButton label="Mail Order" url={shop.mail_order_url} backgroundColor="#2D5016" iconName="mail-outline" />
+                  )}
+                </View>
+              )}
             </View>
           )}
 
@@ -188,6 +202,16 @@ function FacebookButton({ url }: { url: string }) {
     <TouchableOpacity style={styles.facebookBtn} onPress={() => Linking.openURL(href)}>
       <Ionicons name="logo-facebook" size={20} color="#fff" />
       <Text style={styles.facebookBtnText}>View on Facebook</Text>
+    </TouchableOpacity>
+  );
+}
+
+function DeliveryButton({ label, url, backgroundColor, iconName }: { label: string; url: string; backgroundColor: string; iconName: string }) {
+  const href = url.startsWith('http') ? url : `https://${url}`;
+  return (
+    <TouchableOpacity style={[styles.deliveryBtn, { backgroundColor }]} onPress={() => Linking.openURL(href)}>
+      <Ionicons name={iconName as any} size={18} color="#fff" />
+      <Text style={styles.deliveryBtnText}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -269,4 +293,12 @@ const styles = StyleSheet.create({
   hoursTime: { fontSize: 14, color: '#222' },
 
   emptyTabText: { color: '#999', fontSize: 14, marginTop: 8 },
+  deliverySection: { marginTop: 16 },
+  deliverySectionLabel: { fontSize: 13, fontWeight: '700', color: '#555', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
+  deliveryBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    borderRadius: 8, paddingVertical: 10, paddingHorizontal: 14,
+    marginBottom: 8, justifyContent: 'center',
+  },
+  deliveryBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 });

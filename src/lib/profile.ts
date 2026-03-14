@@ -56,7 +56,7 @@ export async function fetchAllBadges(): Promise<Badge[]> {
 
 export async function updateProfile(
   userId: string,
-  updates: Partial<Pick<Profile, 'display_name' | 'bio' | 'avatar_url'>>,
+  updates: Partial<Pick<Profile, 'display_name' | 'bio' | 'avatar_url' | 'is_private'>>,
 ): Promise<void> {
   const { error } = await supabase.from('profiles').update(updates).eq('id', userId);
   if (error) throw error;

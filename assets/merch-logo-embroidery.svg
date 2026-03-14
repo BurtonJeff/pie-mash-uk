@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <!--
+    EMBROIDERY VERSION — merch-logo-embroidery.svg
+    Designed for machine embroidery on sweatshirts.
+    3 thread colours only:
+      1. Dark green  #2D5016  — heart fill
+      2. Cream/white #F5F0E0  — heart border + text fill
+      3. Dark green  #2D5016  — text outline (same bobbin as heart)
+    No gradients · No transparency · No filters · Bold outlines
+  -->
+
+  <!-- ── Heart body (dark green fill, cream satin-stitch border) ── -->
+  <path d="M 200,345
+           C 155,310 80,270 40,225
+           C 15,198 10,175 10,155
+           C 10,90 58,52 118,52
+           C 152,52 180,68 200,95
+           C 220,68 248,52 282,52
+           C 342,52 390,90 390,155
+           C 390,175 385,198 360,225
+           C 320,270 245,310 200,345 Z"
+        fill="#2D5016"
+        stroke="#F5F0E0"
+        stroke-width="14"
+        stroke-linejoin="round"/>
+
+  <!-- ── P&amp;M text ── -->
+  <text x="200" y="168"
+        font-family="'Arial Black', 'Impact', 'Franklin Gothic Heavy', sans-serif"
+        font-size="100"
+        font-weight="900"
+        text-anchor="middle"
+        dominant-baseline="central"
+        fill="#F5F0E0"
+        stroke="#2D5016"
+        stroke-width="6"
+        stroke-linejoin="round"
+        paint-order="stroke fill">P&amp;M</text>
+</svg>
