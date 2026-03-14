@@ -119,6 +119,9 @@ export interface ShopFormData {
   longitude: string;
   price_range: 1 | 2 | 3 | 4;
   opening_hours: OpeningHours;
+  deliveroo_url: string;
+  uber_eats_url: string;
+  mail_order_url: string;
 }
 
 export async function fetchAdminShopById(shopId: string): Promise<AdminShop> {
@@ -162,6 +165,9 @@ export async function addShop(data: ShopFormData): Promise<void> {
     opening_hours: data.opening_hours,
     is_active: true,
     is_featured: false,
+    deliveroo_url: data.deliveroo_url || null,
+    uber_eats_url: data.uber_eats_url || null,
+    mail_order_url: data.mail_order_url || null,
   });
 
   if (error) throw error;
@@ -184,6 +190,9 @@ export async function updateShop(shopId: string, data: ShopFormData): Promise<vo
       longitude: parseFloat(data.longitude),
       price_range: data.price_range,
       opening_hours: data.opening_hours,
+      deliveroo_url: data.deliveroo_url || null,
+      uber_eats_url: data.uber_eats_url || null,
+      mail_order_url: data.mail_order_url || null,
     })
     .eq('id', shopId);
 
@@ -506,6 +515,117 @@ export async function setUserActive(userId: string, active: boolean): Promise<vo
   if (error) throw error;
 }
 
+/**
+ * Insert a check-in on behalf of any user, bypassing GPS and duplicate-day
+ * restrictions. For admin use only — the caller must already be verified admin.
+ */
+export async function adminCreateCheckIn(
+  targetUserId: string,
+  shopId: string,
+  checkedInAt: Date,
+): Promise<void> {
+  // Fetch shop for coordinates and featured status
+  const { data: shop, error: se } = await supabase
+    .from('shops')
+    .select('latitude, longitude, is_featured')
+    .eq('id', shopId)
+    .single();
+  if (se || !shop) throw new Error('Shop not found');
+
+  // Snapshot badges before so we can diff afterwards
+  const { data: existingBadges } = await supabase
+    .from('user_badges')
+    .select('badge_id')
+    .eq('user_id', targetUserId);
+  const beforeBadges = new Set((existingBadges ?? []).map((r: any) => r.badge_id as string));
+
+  // Insert the check-in with the specified timestamp
+  const { data: checkin, error: ce } = await supabase
+    .from('checkins')
+    .insert({
+      user_id: targetUserId,
+      shop_id: shopId,
+      latitude: shop.latitude,
+      longitude: shop.longitude,
+      checked_in_at: checkedInAt.toISOString(),
+      notes: null,
+      photo_url: null,
+      photo_urls: [],
+    })
+    .select()
+    .single();
+  if (ce) throw ce;
+
+  // Calculate points (same logic as submitCheckIn)
+  let pointsEarned = checkin.points_earned;
+  if (pointsEarned === 0) {
+    const { count: shopCount } = await supabase
+      .from('checkins')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', targetUserId)
+      .eq('shop_id', shopId);
+    const isFirstVisit = (shopCount ?? 1) === 1;
+    pointsEarned = 10 + (isFirstVisit ? 25 : 0) + (shop.is_featured ? 10 : 0);
+    await supabase
+      .from('checkins')
+      .update({ points_earned: pointsEarned })
+      .eq('id', checkin.id);
+  }
+
+  // Update profile totals
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('total_points, total_visits, unique_shops_visited')
+    .eq('id', targetUserId)
+    .single();
+  if (profile) {
+    const { count: shopVisitCount } = await supabase
+      .from('checkins')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', targetUserId)
+      .eq('shop_id', shopId);
+    const isFirstVisit = (shopVisitCount ?? 1) === 1;
+    const newVisits = profile.total_visits + 1;
+    const newUniqueShops = isFirstVisit
+      ? profile.unique_shops_visited + 1
+      : profile.unique_shops_visited;
+    await supabase.from('profiles').update({
+      total_points: profile.total_points + pointsEarned,
+      total_visits: newVisits,
+      unique_shops_visited: newUniqueShops,
+    }).eq('id', targetUserId);
+
+    // Award any newly-earned badges
+    const { data: activeBadges } = await supabase
+      .from('badges')
+      .select('id, criteria_type, criteria_value, criteria_shops')
+      .eq('is_active', true);
+    const hasTourBadge = (activeBadges ?? []).some((b: any) => b.criteria_type === 'shop_tour');
+    let visitedShopIds: Set<string> = new Set();
+    if (hasTourBadge) {
+      const { data: visits } = await supabase
+        .from('checkins')
+        .select('shop_id')
+        .eq('user_id', targetUserId);
+      visitedShopIds = new Set((visits ?? []).map((v: any) => v.shop_id));
+    }
+    const toAward = (activeBadges ?? []).filter((b: any) => {
+      if (beforeBadges.has(b.id)) return false;
+      if (b.criteria_type === 'total_checkins') return newVisits >= b.criteria_value;
+      if (b.criteria_type === 'unique_shops') return newUniqueShops >= b.criteria_value;
+      if (b.criteria_type === 'shop_tour' && Array.isArray(b.criteria_shops) && b.criteria_shops.length > 0) {
+        return b.criteria_shops.every((id: string) => visitedShopIds.has(id));
+      }
+      return false;
+    });
+    if (toAward.length > 0) {
+      await supabase.from('user_badges').insert(
+        toAward.map((b: any) => ({ user_id: targetUserId, badge_id: b.id })),
+      );
+    }
+  }
+}
+
 export async function deleteFeedback(id: string): Promise<void> {
   const { error } = await supabase.from('feedback').delete().eq('id', id);
   if (error) throw error;
@@ -536,4 +656,98 @@ export async function fetchAdminFeedback(): Promise<FeedbackItem[]> {
     submitted_at: row.submitted_at,
     user: row.profiles ?? null,
   }));
+}
+
+// ─── Shop Admins ──────────────────────────────────────────────────────────────
+
+export interface ShopAdminAssignment {
+  id: string;
+  shopId: string;
+  shopName: string;
+  shopCity: string;
+  assignedAt: string;
+}
+
+export async function fetchShopAdmins(shopId: string): Promise<{ userId: string; username: string; displayName: string; assignedAt: string }[]> {
+  const { data, error } = await supabase
+    .from('shop_admins')
+    .select('user_id, assigned_at, profiles(username, display_name)')
+    .eq('shop_id', shopId);
+  if (error) throw error;
+  return (data ?? []).map((row: any) => ({
+    userId: row.user_id,
+    username: row.profiles?.username ?? '',
+    displayName: row.profiles?.display_name ?? '',
+    assignedAt: row.assigned_at,
+  }));
+}
+
+export async function assignShopAdmin(userId: string, shopId: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { error } = await supabase.from('shop_admins').insert({ user_id: userId, shop_id: shopId, assigned_by: user?.id });
+  if (error) throw error;
+}
+
+export async function removeShopAdmin(userId: string, shopId: string): Promise<void> {
+  const { error } = await supabase.from('shop_admins').delete().eq('user_id', userId).eq('shop_id', shopId);
+  if (error) throw error;
+}
+
+export async function isShopAdmin(userId: string): Promise<boolean> {
+  const { data, error } = await supabase.from('shop_admins').select('id').eq('user_id', userId).limit(1);
+  if (error) return false;
+  return (data ?? []).length > 0;
+}
+
+export async function fetchUserShopAdminAssignments(userId: string): Promise<ShopAdminAssignment[]> {
+  const { data, error } = await supabase
+    .from('shop_admins')
+    .select('id, shop_id, assigned_at, shops(name, city)')
+    .eq('user_id', userId);
+  if (error) throw error;
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    shopId: row.shop_id,
+    shopName: row.shops?.name ?? '',
+    shopCity: row.shops?.city ?? '',
+    assignedAt: row.assigned_at,
+  }));
+}
+
+// ─── Shop Audit Log ──────────────────────────────────────────────────────────
+
+export interface ShopAuditEntry {
+  id: string;
+  shopId: string;
+  changedBy: string | null;
+  changedByUsername: string | null;
+  changedAt: string;
+  previousData: Record<string, any>;
+  newData: Record<string, any>;
+}
+
+export async function fetchShopAuditLog(shopId: string): Promise<ShopAuditEntry[]> {
+  const { data, error } = await supabase
+    .from('shop_audit_log')
+    .select('id, shop_id, changed_by, changed_at, previous_data, new_data, profiles(username)')
+    .eq('shop_id', shopId)
+    .order('changed_at', { ascending: false });
+
+  if (error) throw error;
+
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    shopId: row.shop_id,
+    changedBy: row.changed_by,
+    changedByUsername: row.profiles?.username ?? null,
+    changedAt: row.changed_at,
+    previousData: row.previous_data,
+    newData: row.new_data,
+  }));
+}
+
+export async function revertShopToAuditVersion(shopId: string, previousData: Record<string, any>): Promise<void> {
+  const { id, created_at, updated_at, slug, ...fields } = previousData;
+  const { error } = await supabase.from('shops').update(fields).eq('id', shopId);
+  if (error) throw error;
 }

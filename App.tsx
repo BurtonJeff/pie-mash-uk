@@ -3,10 +3,14 @@ import { NavigationContainer } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
 import { initAuthListener } from './src/store/authStore';
 import { useAuthStore } from './src/store/authStore';
 import RootNavigator from './src/navigation/RootNavigator';
 import { navigationRef } from './src/navigation/navigationRef';
+
+// Keep the native splash visible until RootNavigator explicitly hides it.
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const queryClient = new QueryClient();
 

@@ -75,6 +75,11 @@ export default function AdminHomeScreen({ navigation }: Props) {
         onPress={() => navigation.navigate('AdminUsers')}
       />
       <NavCard
+        icon="location-outline"
+        label="Manual Check-In"
+        onPress={() => navigation.navigate('AdminManualCheckIn')}
+      />
+      <NavCard
         icon="share-social-outline"
         label="Social Links"
         onPress={() => navigation.navigate('AdminSocialLinks')}

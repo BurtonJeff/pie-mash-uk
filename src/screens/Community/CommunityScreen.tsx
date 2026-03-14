@@ -1,16 +1,17 @@
 import React, { useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ActivityIndicator, Linking,
+  ActivityIndicator, Linking, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import SocialIcon from '../../components/common/SocialIcon';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 import { CommunityStackParamList } from '../../navigation/CommunityNavigator';
 import { useAuthStore } from '../../store/authStore';
 import {
-  useAllTimeLeaderboard, useWeeklyLeaderboard,
+  useAllTimeLeaderboard, useWeeklyLeaderboard, useMonthlyLeaderboard, useYearlyLeaderboard,
   useUserGroups, useActiveChallenges,
 } from '../../hooks/useCommunity';
 import LeaderboardRow from '../../components/community/LeaderboardRow';
@@ -23,7 +24,7 @@ import { fetchActiveSocialLinks, SocialLink } from '../../lib/content';
 
 type Props = NativeStackScreenProps<CommunityStackParamList, 'CommunityHome'>;
 type Tab = 'leaderboard' | 'challenges' | 'groups' | 'social';
-type LeaderboardPeriod = 'alltime' | 'weekly';
+type LeaderboardPeriod = 'alltime' | 'weekly' | 'monthly' | 'yearly';
 
 export default function CommunityScreen({ navigation }: Props) {
   const { user } = useAuthStore();
@@ -37,6 +38,8 @@ export default function CommunityScreen({ navigation }: Props) {
 
   const allTime = useAllTimeLeaderboard();
   const weekly = useWeeklyLeaderboard();
+  const monthly = useMonthlyLeaderboard();
+  const yearly = useYearlyLeaderboard();
   const challenges = useActiveChallenges(groupIds);
   const socialLinks = useQuery({
     queryKey: ['socialLinks'],
@@ -44,10 +47,10 @@ export default function CommunityScreen({ navigation }: Props) {
     staleTime: 60000,
   });
 
-  const leaderboard = lbPeriod === 'alltime' ? allTime : weekly;
+  const leaderboard = lbPeriod === 'alltime' ? allTime : lbPeriod === 'weekly' ? weekly : lbPeriod === 'monthly' ? monthly : yearly;
 
   const TABS: { key: Tab; label: string }[] = [
-    { key: 'leaderboard', label: 'Top' },
+    { key: 'leaderboard', label: 'Leaderboard' },
     { key: 'challenges', label: 'Challenges' },
     { key: 'groups', label: 'Groups' },
     { key: 'social', label: 'Social' },
@@ -72,14 +75,19 @@ export default function CommunityScreen({ navigation }: Props) {
       {tab === 'leaderboard' && (
         <>
           <View style={styles.subTabRow}>
-            {(['alltime', 'weekly'] as LeaderboardPeriod[]).map((p) => (
+            {([
+              { key: 'alltime', label: 'All time' },
+              { key: 'weekly', label: 'This week' },
+              { key: 'monthly', label: 'This month' },
+              { key: 'yearly', label: 'This year' },
+            ] as { key: LeaderboardPeriod; label: string }[]).map((p) => (
               <TouchableOpacity
-                key={p}
-                style={[styles.subTab, lbPeriod === p && styles.subTabActive]}
-                onPress={() => setLbPeriod(p)}
+                key={p.key}
+                style={[styles.subTab, lbPeriod === p.key && styles.subTabActive]}
+                onPress={() => setLbPeriod(p.key)}
               >
-                <Text style={[styles.subTabText, lbPeriod === p && styles.subTabTextActive]}>
-                  {p === 'alltime' ? 'All time' : 'This week'}
+                <Text style={[styles.subTabText, lbPeriod === p.key && styles.subTabTextActive]}>
+                  {p.label}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -151,7 +159,13 @@ export default function CommunityScreen({ navigation }: Props) {
           renderItem={({ item }) => (
             <GroupCard
               group={item}
-              onPress={() => navigation.navigate('GroupDetail', { groupId: item.id, groupName: item.name, inviteCode: item.inviteCode, createdBy: item.createdBy, requiresConfirmation: item.requiresConfirmation })}
+              onPress={() => {
+                if (item.userStatus === 'pending') {
+                  Alert.alert('Awaiting approval', 'Your request to join this group is pending. An admin will review it shortly.');
+                  return;
+                }
+                navigation.navigate('GroupDetail', { groupId: item.id, groupName: item.name, inviteCode: item.inviteCode, createdBy: item.createdBy, requiresConfirmation: item.requiresConfirmation });
+              }}
             />
           )}
           ListEmptyComponent={
@@ -197,7 +211,7 @@ function SocialLinkCard({ link }: { link: SocialLink }) {
       activeOpacity={0.85}
     >
       <View style={[styles.socialIconWrap, { backgroundColor: link.icon_color }]}>
-        <Ionicons name={link.icon_name as any} size={26} color="#fff" />
+        <SocialIcon name={link.icon_name} size={26} color="#fff" />
       </View>
       <Text style={styles.socialLabel}>{link.label}</Text>
       <Ionicons name="open-outline" size={18} color="#aaa" />

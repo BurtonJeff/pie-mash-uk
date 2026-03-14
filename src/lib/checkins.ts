@@ -230,6 +230,16 @@ export async function updateCheckIn(params: UpdateCheckInParams): Promise<void> 
   if (error) throw error;
 }
 
+/** Return the set of shop IDs the user has ever checked in to. */
+export async function fetchVisitedShopIds(userId: string): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from('checkins')
+    .select('shop_id')
+    .eq('user_id', userId);
+  if (error) throw error;
+  return new Set((data ?? []).map((r: any) => r.shop_id as string));
+}
+
 export async function fetchUserCheckins(userId: string): Promise<(CheckIn & { shop_name: string })[]> {
   const { data, error } = await supabase
     .from('checkins')

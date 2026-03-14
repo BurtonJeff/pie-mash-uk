@@ -16,11 +16,15 @@ export default function GroupCard({ group, onPress }: Props) {
       <View style={styles.info}>
         <View style={styles.topRow}>
           <Text style={styles.name} numberOfLines={1}>{group.name}</Text>
-          {group.userRole === 'admin' && (
+          {group.userStatus === 'pending' ? (
+            <View style={styles.pendingBadge}>
+              <Text style={styles.pendingText}>Pending approval</Text>
+            </View>
+          ) : group.userRole === 'admin' ? (
             <View style={styles.adminBadge}>
               <Text style={styles.adminText}>Admin</Text>
             </View>
-          )}
+          ) : null}
         </View>
         <Text style={styles.members}>{group.memberCount} member{group.memberCount !== 1 ? 's' : ''}</Text>
         {group.description ? (
@@ -60,6 +64,8 @@ const styles = StyleSheet.create({
   name: { fontSize: 15, fontWeight: '700', flex: 1 },
   adminBadge: { backgroundColor: '#fff3e0', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
   adminText: { fontSize: 10, fontWeight: '700', color: '#e65100' },
+  pendingBadge: { backgroundColor: '#f0f0f0', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
+  pendingText: { fontSize: 10, fontWeight: '600', color: '#888' },
   members: { fontSize: 12, color: '#888' },
   description: { fontSize: 12, color: '#aaa', marginTop: 2 },
   chevron: { fontSize: 22, color: '#ccc', marginLeft: 8 },

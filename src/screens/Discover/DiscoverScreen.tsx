@@ -12,11 +12,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Marker, Callout } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useShops } from '../../hooks/useShops';
+import { useShops, useVisitedShopIds } from '../../hooks/useShops';
 import ShopCard from '../../components/shop/ShopCard';
 import { distanceKm, isOpenNow, OpeningHours } from '../../utils/shopUtils';
 import { ShopWithPhoto } from '../../lib/shops';
 import { DiscoverStackParamList } from '../../navigation/DiscoverNavigator';
+import { useAuthStore } from '../../store/authStore';
 
 type Props = NativeStackScreenProps<DiscoverStackParamList, 'DiscoverHome'>;
 
@@ -31,7 +32,9 @@ const DEFAULT_REGION = {
 };
 
 export default function DiscoverScreen({ navigation }: Props) {
+  const { user } = useAuthStore();
   const { data: shops = [], isLoading, error } = useShops();
+  const { data: visitedIds } = useVisitedShopIds(user?.id);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [sortMode, setSortMode] = useState<SortMode>('nearest');
   const [hideClosedMode, setHideClosedMode] = useState(false);
@@ -168,6 +171,7 @@ export default function DiscoverScreen({ navigation }: Props) {
             <ShopCard
               shop={item}
               distanceKm={getDistance(item)}
+              visited={visitedIds?.has(item.id)}
               onPress={() => navigation.navigate('ShopDetail', { shopId: item.id })}
             />
           )}
@@ -181,6 +185,7 @@ export default function DiscoverScreen({ navigation }: Props) {
               key={shop.id}
               coordinate={{ latitude: shop.latitude, longitude: shop.longitude }}
               title={shop.name}
+              pinColor={visitedIds?.has(shop.id) ? '#2D5016' : undefined}
             >
               <Callout onPress={() => navigation.navigate('ShopDetail', { shopId: shop.id })}>
                 <View style={styles.callout}>

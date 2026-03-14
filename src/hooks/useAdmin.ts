@@ -27,6 +27,7 @@ import {
   deleteFeedback,
   fetchAdminUsers,
   setUserActive,
+  adminCreateCheckIn,
 } from '../lib/admin';
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
@@ -280,6 +281,25 @@ export function useDeleteFeedback() {
     mutationFn: (id: string) => deleteFeedback(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['adminFeedback'] });
+    },
+  });
+}
+
+export function useAdminCreateCheckIn() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      targetUserId,
+      shopId,
+      checkedInAt,
+    }: {
+      targetUserId: string;
+      shopId: string;
+      checkedInAt: Date;
+    }) => adminCreateCheckIn(targetUserId, shopId, checkedInAt),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['adminUsers'] });
+      qc.invalidateQueries({ queryKey: ['adminStats'] });
     },
   });
 }

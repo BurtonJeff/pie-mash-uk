@@ -1,27 +1,36 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { ShopWithPhoto } from '../../lib/shops';
 import { OpeningHours, isOpenNow, formatDistance, shopPhotoUrl } from '../../utils/shopUtils';
 
 interface Props {
   shop: ShopWithPhoto;
   distanceKm?: number;
+  visited?: boolean;
   onPress: () => void;
 }
 
-export default function ShopCard({ shop, distanceKm, onPress }: Props) {
+export default function ShopCard({ shop, distanceKm, visited, onPress }: Props) {
   const hours = shop.opening_hours as unknown as OpeningHours;
   const open = hours && Object.keys(hours).length > 0 ? isOpenNow(hours) : null;
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
-      {shop.primary_photo ? (
-        <Image source={{ uri: shopPhotoUrl(shop.primary_photo) }} style={styles.image} />
-      ) : (
-        <View style={[styles.image, styles.imagePlaceholder]}>
-          <Text style={styles.imagePlaceholderText}>No photo</Text>
-        </View>
-      )}
+      <View>
+        {shop.primary_photo ? (
+          <Image source={{ uri: shopPhotoUrl(shop.primary_photo) }} style={styles.image} />
+        ) : (
+          <View style={[styles.image, styles.imagePlaceholder]}>
+            <Text style={styles.imagePlaceholderText}>No photo</Text>
+          </View>
+        )}
+        {visited && (
+          <View style={styles.visitedBadge}>
+            <Ionicons name="checkmark-circle" size={22} color="#2D5016" />
+          </View>
+        )}
+      </View>
 
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>{shop.name}</Text>
@@ -59,6 +68,13 @@ const styles = StyleSheet.create({
   },
   image: { width: 90, height: 90 },
   imagePlaceholder: { backgroundColor: '#f0ede8', alignItems: 'center', justifyContent: 'center' },
+  visitedBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#fff',
+    borderRadius: 11,
+  },
   imagePlaceholderText: { fontSize: 11, color: '#999' },
   info: { flex: 1, padding: 12, justifyContent: 'space-between' },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

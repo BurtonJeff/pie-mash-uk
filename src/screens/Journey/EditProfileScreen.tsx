@@ -11,10 +11,12 @@ import {
   Platform,
   ScrollView,
   Image,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { compressAvatar } from '../../utils/imageUtils';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { JourneyStackParamList } from '../../navigation/JourneyNavigator';
 import { useAuthStore } from '../../store/authStore';
@@ -47,12 +49,14 @@ export default function EditProfileScreen({ navigation }: Props) {
   const [avatarUri, setAvatarUri] = useState<string | null>(null);   // local pick
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);   // remote url
   const [saving, setSaving] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(false);
 
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.display_name);
       setBio(profile.bio ?? '');
       setAvatarUrl(profile.avatar_url ?? null);
+      setIsPrivate(profile.is_private ?? false);
     }
   }, [profile]);
 
@@ -66,10 +70,10 @@ export default function EditProfileScreen({ navigation }: Props) {
       mediaTypes: 'images',
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.8,
     });
     if (!result.canceled) {
-      setAvatarUri(result.assets[0].uri);
+      const compressed = await compressAvatar(result.assets[0].uri);
+      setAvatarUri(compressed);
     }
   }
 
@@ -84,6 +88,7 @@ export default function EditProfileScreen({ navigation }: Props) {
       await updateProfile(userId, {
         display_name: displayName.trim(),
         bio: bio.trim() || undefined,
+        is_private: isPrivate,
         ...(newAvatarUrl !== avatarUrl && { avatar_url: newAvatarUrl ?? undefined }),
       });
       queryClient.invalidateQueries({ queryKey: ['profile', userId] });
@@ -139,6 +144,20 @@ export default function EditProfileScreen({ navigation }: Props) {
             textAlignVertical="top"
           />
           <Text style={styles.charCount}>{bio.length}/200</Text>
+
+          {/* ── Private Profile ── */}
+          <View style={styles.privateRow}>
+            <View style={styles.privateTextWrap}>
+              <Text style={styles.privateLabel}>Private profile</Text>
+              <Text style={styles.privateSub}>Your stats won't appear in global leaderboards</Text>
+            </View>
+            <Switch
+              value={isPrivate}
+              onValueChange={setIsPrivate}
+              trackColor={{ false: '#ddd', true: '#2D5016' }}
+              thumbColor="#fff"
+            />
+          </View>
 
           <TouchableOpacity style={styles.saveButton} onPress={save} disabled={saving}>
             {saving ? (
@@ -242,4 +261,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   discardText: { color: '#666', fontSize: 16, fontWeight: '500' },
+  privateRow: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    padding: 14,
+    marginBottom: 20,
+    gap: 12,
+  },
+  privateTextWrap: { flex: 1 },
+  privateLabel: { fontSize: 15, color: '#1a1a1a', fontWeight: '600' },
+  privateSub: { fontSize: 12, color: '#999', marginTop: 2 },
 });

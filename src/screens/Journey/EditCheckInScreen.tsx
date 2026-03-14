@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import { compressPhoto } from '../../utils/imageUtils';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { JourneyStackParamList } from '../../navigation/JourneyNavigator';
@@ -45,10 +46,10 @@ export default function EditCheckInScreen({ navigation, route }: Props) {
       mediaTypes: 'images',
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 0.7,
     });
     if (!result.canceled) {
-      setNewPhotoUris((prev) => [...prev, result.assets[0].uri]);
+      const compressed = await compressPhoto(result.assets[0].uri);
+      setNewPhotoUris((prev) => [...prev, compressed]);
     }
   }
 
@@ -61,10 +62,10 @@ export default function EditCheckInScreen({ navigation, route }: Props) {
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 0.7,
     });
     if (!result.canceled) {
-      setNewPhotoUris((prev) => [...prev, result.assets[0].uri]);
+      const compressed = await compressPhoto(result.assets[0].uri);
+      setNewPhotoUris((prev) => [...prev, compressed]);
     }
   }
 

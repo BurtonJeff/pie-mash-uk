@@ -23,6 +23,7 @@ import { useSubmitCheckIn } from '../../hooks/useCheckin';
 import { useAuthStore } from '../../store/authStore';
 import { ShopWithPhoto } from '../../lib/shops';
 import { distanceKm, formatDistance, formatAddress, isOpenNow, OpeningHours } from '../../utils/shopUtils';
+import { compressPhoto } from '../../utils/imageUtils';
 import BadgeCelebration from '../../components/checkin/BadgeCelebration';
 import { CheckInResult } from '../../lib/checkins';
 
@@ -100,9 +101,11 @@ export default function CheckInScreen() {
       mediaTypes: 'images',
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 0.7,
     });
-    if (!result.canceled) setPhotoUris((prev) => [...prev, result.assets[0].uri]);
+    if (!result.canceled) {
+      const compressed = await compressPhoto(result.assets[0].uri);
+      setPhotoUris((prev) => [...prev, compressed]);
+    }
   }
 
   async function takePhoto() {
@@ -114,9 +117,11 @@ export default function CheckInScreen() {
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 0.7,
     });
-    if (!result.canceled) setPhotoUris((prev) => [...prev, result.assets[0].uri]);
+    if (!result.canceled) {
+      const compressed = await compressPhoto(result.assets[0].uri);
+      setPhotoUris((prev) => [...prev, compressed]);
+    }
   }
 
   async function submit() {

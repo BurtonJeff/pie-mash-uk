@@ -9,6 +9,7 @@ export function useSubmitCheckIn() {
     onSuccess: (_, params) => {
       queryClient.invalidateQueries({ queryKey: ['profile'] });
       queryClient.invalidateQueries({ queryKey: ['userCheckins', params.userId] });
+      queryClient.invalidateQueries({ queryKey: ['visitedShopIds', params.userId] });
       queryClient.invalidateQueries({ queryKey: ['feed'] });
     },
   });

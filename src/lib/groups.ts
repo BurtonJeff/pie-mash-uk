@@ -8,6 +8,7 @@ export interface Group {
   createdBy: string;
   memberCount: number;
   userRole: 'admin' | 'member';
+  userStatus: 'active' | 'pending';
   requiresConfirmation: boolean;
 }
 
@@ -16,23 +17,12 @@ export interface JoinGroupResult {
   pendingApproval: boolean;
 }
 
-export interface GroupMessage {
-  id: string;
-  groupId: string;
-  userId: string;
-  username: string;
-  displayName: string;
-  avatarUrl: string | null;
-  body: string;
-  createdAt: string;
-}
-
 export async function fetchUserGroups(userId: string): Promise<Group[]> {
   const { data, error } = await supabase
     .from('group_members')
-    .select('role, groups(id, name, description, invite_code, created_by, requires_confirmation)')
+    .select('role, status, groups(id, name, description, invite_code, created_by, requires_confirmation)')
     .eq('user_id', userId)
-    .eq('status', 'active');
+    .in('status', ['active', 'pending']);
 
   if (error) throw error;
 
@@ -60,6 +50,7 @@ export async function fetchUserGroups(userId: string): Promise<Group[]> {
       createdBy: row.groups.created_by,
       memberCount: countMap.get(row.groups.id) ?? 1,
       userRole: row.role as 'admin' | 'member',
+      userStatus: (row.status ?? 'active') as 'active' | 'pending',
       requiresConfirmation: row.groups.requires_confirmation ?? false,
     }));
 }
@@ -97,6 +88,7 @@ export async function createGroup(
     createdBy: group.created_by,
     memberCount: 1,
     userRole: 'admin',
+    userStatus: 'active',
     requiresConfirmation: group.requires_confirmation ?? false,
   };
 }
@@ -138,32 +130,11 @@ export async function joinGroupByCode(userId: string, code: string): Promise<Joi
       createdBy: group.created_by,
       memberCount: 0,
       userRole: 'member',
+      userStatus: pendingApproval ? 'pending' : 'active',
       requiresConfirmation: group.requires_confirmation ?? false,
     },
     pendingApproval,
   };
-}
-
-export async function fetchGroupMessages(groupId: string): Promise<GroupMessage[]> {
-  const { data, error } = await supabase
-    .from('group_messages')
-    .select('id, group_id, user_id, body, created_at, profiles(username, display_name, avatar_url)')
-    .eq('group_id', groupId)
-    .order('created_at', { ascending: true })
-    .limit(100);
-
-  if (error) throw error;
-
-  return (data ?? []).map((row: any) => ({
-    id: row.id,
-    groupId: row.group_id,
-    userId: row.user_id,
-    username: row.profiles?.username ?? '',
-    displayName: row.profiles?.display_name ?? '',
-    avatarUrl: row.profiles?.avatar_url ?? null,
-    body: row.body,
-    createdAt: row.created_at,
-  }));
 }
 
 export interface GroupMember {
@@ -191,14 +162,14 @@ export interface PendingMember {
 export async function fetchGroupMembers(groupId: string): Promise<GroupMember[]> {
   const { data, error } = await supabase
     .from('group_members')
-    .select('role, status, joined_at, profiles(id, username, display_name, avatar_url, bio, total_points, total_visits, unique_shops_visited)')
+    .select('role, status, joined_at, profiles(id, username, display_name, avatar_url, bio, total_points, total_visits, unique_shops_visited, is_active)')
     .eq('group_id', groupId)
     .eq('status', 'active')
     .order('joined_at', { ascending: true });
 
   if (error) throw error;
 
-  return (data ?? []).map((row: any) => ({
+  return (data ?? []).filter((row: any) => row.profiles?.is_active).map((row: any) => ({
     userId: row.profiles.id,
     username: row.profiles.username,
     displayName: row.profiles.display_name,
@@ -216,14 +187,14 @@ export async function fetchGroupMembers(groupId: string): Promise<GroupMember[]>
 export async function fetchPendingMembers(groupId: string): Promise<PendingMember[]> {
   const { data, error } = await supabase
     .from('group_members')
-    .select('joined_at, profiles(id, username, display_name, avatar_url)')
+    .select('joined_at, profiles(id, username, display_name, avatar_url, is_active)')
     .eq('group_id', groupId)
     .eq('status', 'pending')
     .order('joined_at', { ascending: true });
 
   if (error) throw error;
 
-  return (data ?? []).map((row: any) => ({
+  return (data ?? []).filter((row: any) => row.profiles?.is_active).map((row: any) => ({
     userId: row.profiles.id,
     username: row.profiles.username,
     displayName: row.profiles.display_name,
@@ -283,26 +254,3 @@ export async function removeGroupMember(groupId: string, targetUserId: string): 
   if (error) throw error;
 }
 
-export async function deleteGroupChat(groupId: string): Promise<void> {
-  const { error } = await supabase
-    .from('group_messages')
-    .delete()
-    .eq('group_id', groupId);
-  if (error) throw error;
-}
-
-export async function sendMessage(groupId: string, userId: string, body: string): Promise<void> {
-  const { error } = await supabase
-    .from('group_messages')
-    .insert({ group_id: groupId, user_id: userId, body });
-  if (error) throw error;
-
-  // Fire-and-forget: notify other group members.
-  // Never let a notification failure surface to the user.
-  const preview = body.length > 60 ? `${body.slice(0, 60)}…` : body;
-  supabase.functions
-    .invoke('notify-group-message', {
-      body: { group_id: groupId, sender_id: userId, message_preview: preview },
-    })
-    .catch(() => {});
-}

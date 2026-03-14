@@ -19,6 +19,9 @@ import AdminAppConfigScreen from '../screens/Admin/AdminAppConfigScreen';
 import AdminUsersScreen from '../screens/Admin/AdminUsersScreen';
 import AdminSocialLinksScreen from '../screens/Admin/AdminSocialLinksScreen';
 import AdminSocialLinkFormScreen from '../screens/Admin/AdminSocialLinkFormScreen';
+import AdminShopAdminsScreen from '../screens/Admin/AdminShopAdminsScreen';
+import AdminShopHistoryScreen from '../screens/Admin/AdminShopHistoryScreen';
+import AdminManualCheckInScreen from '../screens/Admin/AdminManualCheckInScreen';
 
 export type AdminStackParamList = {
   AdminHome: undefined;
@@ -40,6 +43,9 @@ export type AdminStackParamList = {
   AdminUsers: undefined;
   AdminSocialLinks: undefined;
   AdminSocialLinkForm: { linkId?: string };
+  AdminShopAdmins: { shopId: string };
+  AdminShopHistory: { shopId: string };
+  AdminManualCheckIn: undefined;
 };
 
 const Stack = createNativeStackNavigator<AdminStackParamList>();
@@ -135,6 +141,9 @@ export default function AdminNavigator() {
         name="AdminSocialLinkForm"
         component={AdminSocialLinkFormScreen}
       />
+      <Stack.Screen name="AdminShopAdmins" component={AdminShopAdminsScreen} options={{ title: 'Manage Shop Admins' }} />
+      <Stack.Screen name="AdminShopHistory" component={AdminShopHistoryScreen} options={{ title: 'Shop History' }} />
+      <Stack.Screen name="AdminManualCheckIn" component={AdminManualCheckInScreen} options={{ title: 'Manual Check-In' }} />
     </Stack.Navigator>
   );
 }
