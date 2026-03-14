@@ -556,8 +556,9 @@ export async function adminCreateCheckIn(
     .single();
   if (ce) throw ce;
 
-  // Calculate points (same logic as submitCheckIn)
-  let pointsEarned = checkin.points_earned;
+  // If the DB trigger ran, points_earned and profile totals are already updated.
+  // Only do the client-side fallback when the trigger hasn't fired (points_earned === 0).
+  const pointsEarned = checkin.points_earned;
   if (pointsEarned === 0) {
     const { count: shopCount } = await supabase
       .from('checkins')
@@ -565,63 +566,57 @@ export async function adminCreateCheckIn(
       .eq('user_id', targetUserId)
       .eq('shop_id', shopId);
     const isFirstVisit = (shopCount ?? 1) === 1;
-    pointsEarned = 10 + (isFirstVisit ? 25 : 0) + (shop.is_featured ? 10 : 0);
+    const earned = 10 + (isFirstVisit ? 25 : 0) + (shop.is_featured ? 10 : 0);
     await supabase
       .from('checkins')
-      .update({ points_earned: pointsEarned })
+      .update({ points_earned: earned })
       .eq('id', checkin.id);
-  }
 
-  // Update profile totals
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('total_points, total_visits, unique_shops_visited')
-    .eq('id', targetUserId)
-    .single();
-  if (profile) {
-    const { count: shopVisitCount } = await supabase
-      .from('checkins')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', targetUserId)
-      .eq('shop_id', shopId);
-    const isFirstVisit = (shopVisitCount ?? 1) === 1;
-    const newVisits = profile.total_visits + 1;
-    const newUniqueShops = isFirstVisit
-      ? profile.unique_shops_visited + 1
-      : profile.unique_shops_visited;
-    await supabase.from('profiles').update({
-      total_points: profile.total_points + pointsEarned,
-      total_visits: newVisits,
-      unique_shops_visited: newUniqueShops,
-    }).eq('id', targetUserId);
+    // Update profile totals
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('total_points, total_visits, unique_shops_visited')
+      .eq('id', targetUserId)
+      .single();
+    if (profile) {
+      const newVisits = profile.total_visits + 1;
+      const newUniqueShops = isFirstVisit
+        ? profile.unique_shops_visited + 1
+        : profile.unique_shops_visited;
+      await supabase.from('profiles').update({
+        total_points: profile.total_points + earned,
+        total_visits: newVisits,
+        unique_shops_visited: newUniqueShops,
+      }).eq('id', targetUserId);
 
-    // Award any newly-earned badges
-    const { data: activeBadges } = await supabase
-      .from('badges')
-      .select('id, criteria_type, criteria_value, criteria_shops')
-      .eq('is_active', true);
-    const hasTourBadge = (activeBadges ?? []).some((b: any) => b.criteria_type === 'shop_tour');
-    let visitedShopIds: Set<string> = new Set();
-    if (hasTourBadge) {
-      const { data: visits } = await supabase
-        .from('checkins')
-        .select('shop_id')
-        .eq('user_id', targetUserId);
-      visitedShopIds = new Set((visits ?? []).map((v: any) => v.shop_id));
-    }
-    const toAward = (activeBadges ?? []).filter((b: any) => {
-      if (beforeBadges.has(b.id)) return false;
-      if (b.criteria_type === 'total_checkins') return newVisits >= b.criteria_value;
-      if (b.criteria_type === 'unique_shops') return newUniqueShops >= b.criteria_value;
-      if (b.criteria_type === 'shop_tour' && Array.isArray(b.criteria_shops) && b.criteria_shops.length > 0) {
-        return b.criteria_shops.every((id: string) => visitedShopIds.has(id));
+      // Award any newly-earned badges
+      const { data: activeBadges } = await supabase
+        .from('badges')
+        .select('id, criteria_type, criteria_value, criteria_shops')
+        .eq('is_active', true);
+      const hasTourBadge = (activeBadges ?? []).some((b: any) => b.criteria_type === 'shop_tour');
+      let visitedShopIds: Set<string> = new Set();
+      if (hasTourBadge) {
+        const { data: visits } = await supabase
+          .from('checkins')
+          .select('shop_id')
+          .eq('user_id', targetUserId);
+        visitedShopIds = new Set((visits ?? []).map((v: any) => v.shop_id));
       }
-      return false;
-    });
-    if (toAward.length > 0) {
-      await supabase.from('user_badges').insert(
-        toAward.map((b: any) => ({ user_id: targetUserId, badge_id: b.id })),
-      );
+      const toAward = (activeBadges ?? []).filter((b: any) => {
+        if (beforeBadges.has(b.id)) return false;
+        if (b.criteria_type === 'total_checkins') return newVisits >= b.criteria_value;
+        if (b.criteria_type === 'unique_shops') return newUniqueShops >= b.criteria_value;
+        if (b.criteria_type === 'shop_tour' && Array.isArray(b.criteria_shops) && b.criteria_shops.length > 0) {
+          return b.criteria_shops.every((id: string) => visitedShopIds.has(id));
+        }
+        return false;
+      });
+      if (toAward.length > 0) {
+        await supabase.from('user_badges').insert(
+          toAward.map((b: any) => ({ user_id: targetUserId, badge_id: b.id })),
+        );
+      }
     }
   }
 }

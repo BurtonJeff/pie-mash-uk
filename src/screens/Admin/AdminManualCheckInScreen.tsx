@@ -44,8 +44,9 @@ export default function AdminManualCheckInScreen({ navigation }: Props) {
 
   const filteredUsers = useMemo(() => {
     const q = userSearch.trim().toLowerCase();
-    if (!q) return users;
-    return users.filter(
+    const active = users.filter((u) => u.is_active);
+    if (!q) return active;
+    return active.filter(
       (u) =>
         u.display_name.toLowerCase().includes(q) ||
         u.username.toLowerCase().includes(q),
