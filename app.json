@@ -9,7 +9,7 @@
     "userInterfaceStyle": "light",
     "scheme": "pie-mash-uk",
     "splash": {
-      "image": "./assets/merch-logo.png",
+      "image": "./assets/splash-logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#2D5016"
     },
@@ -74,7 +74,8 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      "expo-font"
+      "expo-font",
+      "react-native-iap"
     ],
     "extra": {
       "eas": {
