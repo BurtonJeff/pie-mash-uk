@@ -132,7 +132,7 @@ export default function HomeScreen({ navigation }: Props) {
             activeOpacity={0.75}
           >
             <Ionicons name="heart-outline" size={18} color="#2D5016" />
-            <Text style={styles.feedbackButtonText}>Support the App</Text>
+            <Text style={styles.feedbackButtonText}>Support Pie & Mash</Text>
             <Ionicons name="chevron-forward" size={16} color="#aaa" style={styles.feedbackChevron} />
           </TouchableOpacity>
 
